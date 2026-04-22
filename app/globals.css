@@ -1,26 +1,546 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap");
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #f6f7ff;
+  --foreground: #1f2937;
+  --cloak-ink: #111827;
+  --cloak-muted: #5b6375;
+  --cloak-card: #ffffff;
+  --cloak-primary: #6d28d9;
+  --cloak-primary-strong: #5b21b6;
+  --cloak-primary-soft: #ece6ff;
+  --cloak-border: #e5e7eb;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Manrope", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.cloak-page-bg {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 20%, #7c3aed 0%, rgba(124, 58, 237, 0) 32%),
+    radial-gradient(circle at 80% 0%, #1d4ed8 0%, rgba(29, 78, 216, 0) 28%),
+    linear-gradient(155deg, #4c1d95 0%, #5b21b6 36%, #4338ca 100%);
+}
+
+.cloak-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(40px);
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.cloak-orb-a {
+  width: 300px;
+  height: 300px;
+  background: #f59e0b;
+  top: -70px;
+  right: -60px;
+}
+
+.cloak-orb-b {
+  width: 360px;
+  height: 360px;
+  background: #22d3ee;
+  bottom: -160px;
+  left: -100px;
+}
+
+.cloak-page-container {
+  position: relative;
+  z-index: 2;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 16px 28px;
+}
+
+.cloak-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.cloak-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+}
+
+.cloak-brand-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(6px);
+}
+
+.cloak-brand-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.cloak-brand-subtitle {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.cloak-header-tools {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.cloak-expire-pill,
+.cloak-mode-pill {
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.cloak-expire-pill {
+  color: #e9ddff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.cloak-mode-pill {
+  color: #5b21b6;
+  background: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cloak-mode-pill:hover {
+  background: #f3ecff;
+}
+
+.cloak-main-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.cloak-convert-shell,
+.cloak-history-shell {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 20px 48px rgba(30, 16, 74, 0.2);
+  backdrop-filter: blur(8px);
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.cloak-section-title {
+  margin-bottom: 14px;
+}
+
+.cloak-section-title h2 {
+  font-size: 1.4rem;
+  line-height: 1.2;
+  color: var(--cloak-ink);
+  font-weight: 800;
+}
+
+.cloak-section-title p {
+  margin-top: 6px;
+  font-size: 0.92rem;
+  color: var(--cloak-muted);
+}
+
+.cloak-tab-shell {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: #f4f2ff;
+  border-radius: 14px;
+  padding: 6px;
+}
+
+.cloak-tab-button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 8px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  color: #727a8b;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cloak-tab-button.is-active {
+  background: #ffffff;
+  color: var(--cloak-primary);
+  box-shadow: 0 8px 20px rgba(107, 41, 214, 0.15);
+}
+
+.cloak-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.cloak-input-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cloak-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #98a1b3;
+}
+
+.cloak-input,
+.cloak-textarea,
+.cloak-search-row input {
+  width: 100%;
+  border: 2px solid var(--cloak-border);
+  border-radius: 14px;
+  color: var(--cloak-ink);
+  background: #ffffff;
+  font-size: 0.94rem;
+  transition: border-color 0.2s;
+}
+
+.cloak-input {
+  padding: 14px 14px 14px 40px;
+}
+
+.cloak-input.has-error {
+  border-color: #ef4444;
+}
+
+.cloak-input:focus,
+.cloak-textarea:focus,
+.cloak-search-row input:focus {
+  outline: none;
+  border-color: var(--cloak-primary);
+}
+
+.cloak-textarea {
+  min-height: 220px;
+  resize: vertical;
+  padding: 14px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.cloak-primary-button {
+  border: 0;
+  border-radius: 12px;
+  color: #ffffff;
+  background: var(--cloak-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 12px 16px;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.cloak-primary-button:disabled {
+  cursor: not-allowed;
+  background: #b6a1f5;
+}
+
+.cloak-primary-button:not(:disabled):hover {
+  background: var(--cloak-primary-strong);
+}
+
+.cloak-panel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cloak-counter {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  background: var(--cloak-primary-soft);
+  color: var(--cloak-primary);
+  font-weight: 700;
+}
+
+.cloak-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid #f5d88e;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  padding: 8px 10px;
+}
+
+.cloak-upload-zone {
+  width: 100%;
+  border: 2px dashed #d1d5db;
+  border-radius: 16px;
+  min-height: 220px;
+  background: #fafbff;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--cloak-muted);
+  transition: border-color 0.2s;
+}
+
+.cloak-upload-zone:hover {
+  border-color: var(--cloak-primary);
+}
+
+.cloak-upload-zone p {
+  color: var(--cloak-ink);
+  font-weight: 700;
+}
+
+.cloak-upload-zone span {
+  font-size: 0.82rem;
+}
+
+.cloak-file-card {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid #ddd6fe;
+  background: #f7f3ff;
+  color: var(--cloak-primary-strong);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 7px;
+  padding: 20px;
+}
+
+.cloak-file-card p {
+  font-weight: 700;
+  color: var(--cloak-ink);
+}
+
+.cloak-file-card span {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.cloak-file-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #6b7280;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.cloak-file-close:hover {
+  color: #111827;
+}
+
+.cloak-hidden {
+  display: none;
+}
+
+.cloak-error-text {
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.cloak-history-header h3 {
+  font-size: 1.16rem;
+  line-height: 1.2;
+  color: var(--cloak-ink);
+  font-weight: 800;
+}
+
+.cloak-history-header p {
+  margin-top: 5px;
+  color: var(--cloak-muted);
+  font-size: 0.86rem;
+}
+
+.cloak-search-row {
+  margin-top: 12px;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.cloak-search-row svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #98a1b3;
+}
+
+.cloak-search-row input {
+  padding: 12px 12px 12px 36px;
+}
+
+.cloak-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e6eaf2;
+  border-radius: 14px;
+}
+
+.cloak-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+.cloak-table thead {
+  background: #f8fafc;
+}
+
+.cloak-table th,
+.cloak-table td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 0.86rem;
+}
+
+.cloak-table tbody tr:hover {
+  background: #fbfbff;
+}
+
+.cloak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.cloak-badge.is-single {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.cloak-badge.is-batch {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.cloak-badge.is-file {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.cloak-link-meta a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #6d28d9;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cloak-link-meta a:hover {
+  text-decoration: underline;
+}
+
+.cloak-link-meta p {
+  margin-top: 4px;
+  color: #6b7280;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cloak-icon-btn {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: #374151;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.cloak-icon-btn:hover {
+  background: #f9fafb;
+}
+
+@media (max-width: 900px) {
+  .cloak-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cloak-header-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+  .cloak-page-container {
+    padding-top: 16px;
+  }
+
+  .cloak-expire-pill {
+    display: none;
+  }
+
+  .cloak-convert-shell,
+  .cloak-history-shell {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .cloak-input-row {
+    display: grid;
+  }
+
+  .cloak-input {
+    padding-right: 12px;
+  }
+
+  .cloak-primary-button {
+    width: 100%;
+  }
 }
