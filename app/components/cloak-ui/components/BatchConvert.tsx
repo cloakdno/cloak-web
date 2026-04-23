@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, AlertCircle } from 'lucide-react'
 import { extractHttpUrls, isValidUrl } from '../utils/shortlink'
 import { FormatTip } from './FormatTip'
 
@@ -10,7 +10,6 @@ interface BatchConvertProps {
 export function BatchConvert({ onConvert }: BatchConvertProps) {
   const [text, setText] = useState('')
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
 
   const extractedUrls = extractHttpUrls(text)
@@ -45,8 +44,6 @@ export function BatchConvert({ onConvert }: BatchConvertProps) {
     onConvert(text, {
       onConfirm: () => {
         setText('')
-        setSuccess(true)
-        setTimeout(() => setSuccess(false), 3000)
       },
     })
   }
@@ -86,12 +83,6 @@ export function BatchConvert({ onConvert }: BatchConvertProps) {
         <div className="flex items-center gap-2 text-red-500 text-sm mt-3">
           <AlertCircle size={16} />
           <span>{error}</span>
-        </div>
-      )}
-      {success && (
-        <div className="flex items-center gap-2 text-green-600 text-sm mt-3 bg-green-50 px-4 py-3 rounded-xl">
-          <CheckCircle2 size={16} />
-          <span>批量转换已提交，请在下方「转换记录」中查看结果</span>
         </div>
       )}
     </div>

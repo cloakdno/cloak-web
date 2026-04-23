@@ -211,8 +211,8 @@ export function HistoryTable({
       }
     }
     return {
-      label: '单链任务',
-      icon: <ExternalLink size={12} className="text-purple-500" />,
+      label: '单链',
+      icon: null,
       className: 'bg-purple-50 text-purple-600',
     }
   }
@@ -318,7 +318,6 @@ export function HistoryTable({
                   <ExternalLink size={12} className="transition-opacity" />
                 </a>
                 {renderSourceBadge(link.source)}
-                {renderTaskStatusBadge(false)}
               </>
             )}
           </div>
@@ -498,7 +497,6 @@ export function HistoryTable({
                 <span className="text-sm text-purple-500 font-medium">
                   {isFile ? '文件转换中...' : '批量转换中...'}
                 </span>
-                {renderSourceBadge(group.source)}
                 {renderTaskStatusBadge(true)}
                 <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-400 rounded-full font-medium">
                   {groupRecognizedCount} 条
@@ -519,8 +517,6 @@ export function HistoryTable({
                 >
                   {groupRecognizedCount} 条
                 </span>
-                {renderSourceBadge(group.source)}
-                {renderTaskStatusBadge(false)}
               </>
             )}
           </div>

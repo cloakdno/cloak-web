@@ -22,6 +22,9 @@ export function UserManageModal({
   onChangeUsername,
   onChangePassword,
 }: UserManageModalProps) {
+  const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '')
+  const apiDocsUrl = `${apiBaseUrl}/swagger/index.html#/`
+
   const createdAtLabel = profile?.created_at
     ? new Date(profile.created_at).toLocaleDateString()
     : '--'
@@ -110,7 +113,7 @@ export function UserManageModal({
                   <span className="text-sm font-medium text-gray-700">API 文档</span>
                 </div>
                 <a
-                  href="https://docs.example.com/api"
+                  href={apiDocsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-purple-600 transition-colors hover:text-purple-700 hover:underline"
