@@ -1,0 +1,1132 @@
+basePath: /
+definitions:
+  bo.ResponseMode:
+    enum:
+    - redirect
+    - proxy
+    type: string
+    x-enum-varnames:
+    - ResponseModeRedirect
+    - ResponseModeProxy
+  request.BatchHideRequest:
+    properties:
+      response_mode:
+        type: string
+      urls:
+        items:
+          type: string
+        type: array
+    type: object
+  request.BatchTextConvertRequest:
+    properties:
+      response_mode:
+        type: string
+      source_text:
+        type: string
+    required:
+    - source_text
+    type: object
+  request.BatchTextUpdateResponseModeRequest:
+    properties:
+      response_mode:
+        type: string
+    required:
+    - response_mode
+    type: object
+  request.ConvertSingleLinkRequest:
+    properties:
+      response_mode:
+        type: string
+      url:
+        type: string
+    required:
+    - url
+    type: object
+  request.DocumentFileUpdateResponseModeRequest:
+    properties:
+      response_mode:
+        type: string
+    required:
+    - response_mode
+    type: object
+  request.UpdateOriginalURLRequest:
+    properties:
+      original_url:
+        type: string
+    required:
+    - original_url
+    type: object
+  request.UpdatePasswordRequest:
+    properties:
+      new_password:
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  request.UpdateResponseModeRequest:
+    properties:
+      response_mode:
+        type: string
+    required:
+    - response_mode
+    type: object
+  request.UpdateUsernameRequest:
+    properties:
+      username:
+        type: string
+    required:
+    - username
+    type: object
+  response.BatchHideItemResponse:
+    properties:
+      code:
+        type: string
+      created:
+        type: boolean
+      fail_cause:
+        type: string
+      input_url:
+        type: string
+      response_mode:
+        $ref: '#/definitions/bo.ResponseMode'
+      short_url:
+        type: string
+    type: object
+  response.BatchHideResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/response.BatchHideItemResponse'
+        type: array
+    type: object
+  response.BatchTextDetailResponse:
+    properties:
+      converted_text:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      recognized_link_count:
+        type: integer
+      response_mode:
+        type: string
+      source_text:
+        type: string
+      status:
+        type: string
+      total_visit_count:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  response.BatchTextSubmitResponse:
+    properties:
+      conversion_id:
+        type: integer
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ConversionPageResponse:
+    properties:
+      has_next:
+        type: boolean
+      has_prev:
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/response.ConversionRecordItemResponse'
+        type: array
+      next_page:
+        type: integer
+      page:
+        type: integer
+      prev_page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  response.ConversionRecordItemResponse:
+    properties:
+      code:
+        type: string
+      conversion_record_id:
+        type: integer
+      created_at:
+        type: string
+      link_id:
+        type: integer
+      original_url:
+        type: string
+      response_mode:
+        type: string
+      short_url:
+        type: string
+    type: object
+  response.DocumentFileSubmitResponse:
+    properties:
+      conversion_id:
+        type: integer
+      file_id:
+        type: integer
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.DocumentFileUpdateResponseModeResponse:
+    properties:
+      conversion_id:
+        type: integer
+      message:
+        type: string
+      response_mode:
+        type: string
+    type: object
+  response.ErrorResponse:
+    properties:
+      code:
+        type: string
+      details: {}
+      message:
+        type: string
+      status:
+        type: integer
+      timestamp:
+        type: string
+    type: object
+  response.LinkDetailResponse:
+    properties:
+      code:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      original_url:
+        type: string
+      response_mode:
+        $ref: '#/definitions/bo.ResponseMode'
+      updated_at:
+        type: string
+      visit_count:
+        type: integer
+    type: object
+  response.LinkOriginalURLUpdateResponse:
+    properties:
+      code:
+        type: string
+      original_url:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.LinkResponseModeUpdateResponse:
+    properties:
+      code:
+        type: string
+      original_url:
+        type: string
+      response_mode:
+        $ref: '#/definitions/bo.ResponseMode'
+      updated_at:
+        type: string
+    type: object
+  response.MessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  response.SingleLinkConvertResponse:
+    properties:
+      code:
+        type: string
+      conversion_record_id:
+        type: integer
+      created:
+        type: boolean
+      created_at:
+        type: string
+      original_url:
+        type: string
+      response_mode:
+        $ref: '#/definitions/bo.ResponseMode'
+      short_url:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.SystemExpiryResponse:
+    properties:
+      expiry_time_formatted:
+        description: ExpiryTimeFormatted 过期时间的人类可读格式（RFC3339），永不过期时为空字符串。
+        type: string
+      expiry_timestamp:
+        description: ExpiryTimestamp 配置的过期 Unix 时间戳（秒），为 0 表示永不过期。
+        type: integer
+      is_expired:
+        description: IsExpired 是否已过期。
+        type: boolean
+      never_expires:
+        description: NeverExpires 是否永不过期。
+        type: boolean
+      remaining_seconds:
+        description: RemainingSeconds 剩余秒数；已过期或永不过期时为 0。
+        type: integer
+    type: object
+  response.UpdatePasswordResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  response.UpdateUsernameResponse:
+    properties:
+      profile:
+        $ref: '#/definitions/response.UserProfileResponse'
+    type: object
+  response.UserProfileResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      registered_days:
+        type: integer
+      total_links:
+        type: integer
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Cloak 服务端 HTTP API 文档。
+  title: Cloak Server API
+  version: "1.0"
+paths:
+  /{code}:
+    get:
+      description: 访问短码，按响应模式返回重定向或代理内容。
+      parameters:
+      - description: 短码
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "301":
+          description: Moved Permanently
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.MessageResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.MessageResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/response.MessageResponse'
+      summary: 访问短链
+      tags:
+      - redirect
+  /api/batch-text/{id}:
+    delete:
+      description: 删除指定批量文本转换任务及其关联数据，异步处理并返回 202。
+      parameters:
+      - description: 转换任务 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/response.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 删除批量文本转换任务
+      tags:
+      - batch-text
+    get:
+      description: 根据任务 ID 获取批量文本转换详情。
+      parameters:
+      - description: 转换任务 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.BatchTextDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 查询批量文本转换详情
+      tags:
+      - batch-text
+  /api/batch-text/{id}/download:
+    get:
+      description: 下载指定任务转换后的文本文件。
+      parameters:
+      - description: 转换任务 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: 转换后的文本内容
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 下载批量文本转换结果
+      tags:
+      - batch-text
+  /api/batch-text/{id}/response-mode:
+    put:
+      consumes:
+      - application/json
+      description: 切换指定批量文本任务下全部短链的响应模式，异步处理并返回 202。
+      parameters:
+      - description: 转换任务 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 切换响应模式请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.BatchTextUpdateResponseModeRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/response.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 切换批量文本任务响应模式
+      tags:
+      - batch-text
+  /api/batch-text/batch:
+    post:
+      consumes:
+      - application/json
+      description: 提交原始文本，后台识别并转换其中的链接。
+      parameters:
+      - description: 批量文本转换请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.BatchTextConvertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.BatchTextSubmitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 提交批量文本转换任务
+      tags:
+      - batch-text
+  /api/conversions:
+    get:
+      description: 按页码和页大小分页查询历史转换记录。
+      parameters:
+      - description: 页码（从 1 开始）
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ConversionPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 分页查询转换记录
+      tags:
+      - conversions
+  /api/conversions/search:
+    get:
+      description: 根据关键字搜索短链或原始链接，并分页返回结果。
+      parameters:
+      - description: 搜索关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 页码（从 1 开始）
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ConversionPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 搜索转换记录
+      tags:
+      - conversions
+  /api/document-file/{id}:
+    delete:
+      description: 删除指定文档转换任务及其关联数据，异步处理并返回 202。
+      parameters:
+      - description: 转换任务 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/response.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 删除文档转换任务
+      tags:
+      - document-file
+  /api/document-file/{id}/download:
+    get:
+      description: 下载指定文档转换任务的结果文件。
+      parameters:
+      - description: 转换任务 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: 转换结果文件
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 下载文档转换结果文件
+      tags:
+      - document-file
+  /api/document-file/{id}/response-mode:
+    put:
+      consumes:
+      - application/json
+      description: 切换指定文档转换任务下全部短链的响应模式，异步处理并返回 202。
+      parameters:
+      - description: 转换任务 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 切换响应模式请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.DocumentFileUpdateResponseModeRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/response.DocumentFileUpdateResponseModeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 切换文档任务响应模式
+      tags:
+      - document-file
+  /api/document-file/batch:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传文本文件并提交转换任务，最大 10MB。
+      parameters:
+      - description: 待转换文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 响应模式
+        in: formData
+        name: response_mode
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.DocumentFileSubmitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 提交文档文件转换任务
+      tags:
+      - document-file
+  /api/links/{code}:
+    delete:
+      description: 根据短码删除短链记录。
+      parameters:
+      - description: 短码
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 删除短链
+      tags:
+      - links
+    get:
+      description: 根据短码查询短链详情。
+      parameters:
+      - description: 短码
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.LinkDetailResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 查询短链详情
+      tags:
+      - links
+  /api/links/{code}/original-url:
+    put:
+      consumes:
+      - application/json
+      description: 根据短码更新对应原始链接。
+      parameters:
+      - description: 短码
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: 修改原始链接请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateOriginalURLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.LinkOriginalURLUpdateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 修改短链原始链接
+      tags:
+      - links
+  /api/links/{code}/response-mode:
+    put:
+      consumes:
+      - application/json
+      description: 根据短码更新短链响应模式（redirect 或 proxy）。
+      parameters:
+      - description: 短码
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: 修改响应模式请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateResponseModeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.LinkResponseModeUpdateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 修改短链响应模式
+      tags:
+      - links
+  /api/links/batch:
+    post:
+      consumes:
+      - application/json
+      description: 批量传入原始链接列表，返回每条链接转换结果。
+      parameters:
+      - description: 批量转换请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.BatchHideRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.BatchHideResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 批量转换链接
+      tags:
+      - links
+  /api/links/convert:
+    post:
+      consumes:
+      - application/json
+      description: 传入原始链接，返回短链与转换记录信息。
+      parameters:
+      - description: 单链接转换请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.ConvertSingleLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SingleLinkConvertResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 单链接转换
+      tags:
+      - links
+  /api/system/expiry:
+    get:
+      description: 返回当前服务是否过期及剩余时间。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SystemExpiryResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: 获取服务过期信息
+      tags:
+      - system
+  /api/user/profile:
+    get:
+      description: 基于 BasicAuth 获取当前登录用户的资料信息。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.UserProfileResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 获取当前用户资料
+      tags:
+      - user
+  /api/user/update-password:
+    post:
+      consumes:
+      - application/json
+      description: 基于 BasicAuth 修改当前用户密码。
+      parameters:
+      - description: 修改密码请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdatePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.UpdatePasswordResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 修改当前用户密码
+      tags:
+      - user
+  /api/user/update-username:
+    post:
+      consumes:
+      - application/json
+      description: 基于 BasicAuth 修改当前用户的用户名。
+      parameters:
+      - description: 修改用户名请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateUsernameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.UpdateUsernameResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BasicAuth: []
+      summary: 修改当前用户名
+      tags:
+      - user
+  /health:
+    get:
+      description: 返回服务健康状态。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 健康检查
+      tags:
+      - health
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"
