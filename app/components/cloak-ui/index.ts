@@ -1,1 +1,1 @@
-export { CloakDashboard } from "./CloakDashboard";
+export { App as CloakDashboard } from './App'
