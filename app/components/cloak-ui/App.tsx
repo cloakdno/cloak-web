@@ -435,13 +435,21 @@ export function App() {
 
     const urls = extractHttpUrls(sourceText)
     const batchId = crypto.randomUUID()
-    const newLinks = urls.map((url) => {
-      const link = createShortLink(url, 'batch', batchId, proxyMode)
-      link.status = 'converting'
-      return link
-    })
+    const tempBatchLink: ShortLink = {
+      id: `temp-batch-${batchId}`,
+      originalUrl: sourceText || `批量任务 #${batchId.slice(0, 8)}`,
+      shortCode: '',
+      shortUrl: '',
+      createdAt: Date.now(),
+      source: 'batch',
+      visits: [],
+      batchId,
+      recognizedLinkCount: urls.length,
+      status: 'converting',
+      proxyMode,
+    }
 
-    setLinks((prev) => [...newLinks, ...prev])
+    setLinks((prev) => [tempBatchLink, ...prev])
 
     try {
       // 批量文本转换接口要求 source_text，需提交用户完整输入内容。
@@ -461,11 +469,11 @@ export function App() {
       }
 
       toast.success(
-        `批量任务已提交：识别 ${apiResponse.recognized_link_count} 条链接，生成 ${apiResponse.conversion_record_count} 条记录。`,
+        `批量任务已提交：识别 ${apiResponse.recognized_link_count} 条链接。`,
       )
     } catch (err) {
       // 批量接口整体失败时，回滚本次临时占位项。
-      setLinks((prev) => prev.filter((link) => link.batchId !== batchId))
+      setLinks((prev) => prev.filter((link) => link.id !== tempBatchLink.id))
 
       let errorMsg = '批量转换失败，请重试'
       if (err instanceof ApiError) {
@@ -788,7 +796,7 @@ export function App() {
         const response = await searchConversions(apiClient, {
           keyword: keyword.trim(),
           page: 1,
-          size: 100,
+          size: 20,
         })
         const mappedLinks = response.items.map(mapConversionRecordToShortLink)
         setLinks(mappedLinks)

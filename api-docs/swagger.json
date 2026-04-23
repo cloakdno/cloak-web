@@ -324,13 +324,20 @@
                 "summary": "分页查询转换记录",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
+                        "default": 1,
+                        "example": 1,
                         "description": "页码（从 1 开始）",
                         "name": "page",
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
+                        "default": 20,
+                        "example": 20,
                         "description": "每页条数",
                         "name": "size",
                         "in": "query"
@@ -382,18 +389,27 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "搜索关键词",
+                        "example": "source.txt",
+                        "description": "搜索关键词，不能为空，支持文件名、短链码、原始链接",
                         "name": "keyword",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     },
                     {
+                        "minimum": 1,
                         "type": "integer",
+                        "default": 1,
+                        "example": 1,
                         "description": "页码（从 1 开始）",
                         "name": "page",
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
+                        "default": 20,
+                        "example": 20,
                         "description": "每页条数",
                         "name": "size",
                         "in": "query"
@@ -1511,7 +1527,9 @@
                     "type": "string"
                 },
                 "download_url": {
-                    "type": "string"
+                    "description": "DownloadURL 为批量文本转换结果下载地址。\n当列表或搜索接口携带 Authorization 请求头时，返回值会自动拼接 authorization 查询参数，便于前端直接打开下载链接。",
+                    "type": "string",
+                    "example": "http://localhost:9000/api/batch-text/12/download"
                 },
                 "id": {
                     "description": "ID 为主键 ID。",
@@ -1611,31 +1629,46 @@
             "type": "object",
             "properties": {
                 "has_next": {
-                    "type": "boolean"
+                    "description": "HasNext 表示是否存在下一页。",
+                    "type": "boolean",
+                    "example": false
                 },
                 "has_prev": {
-                    "type": "boolean"
+                    "description": "HasPrev 表示是否存在上一页。",
+                    "type": "boolean",
+                    "example": false
                 },
                 "items": {
+                    "description": "Items 为当前页转换记录列表。",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/response.ConversionRecordItemResponse"
                     }
                 },
                 "next_page": {
-                    "type": "integer"
+                    "description": "NextPage 为下一页页码，无下一页时为 0。",
+                    "type": "integer",
+                    "example": 0
                 },
                 "page": {
-                    "type": "integer"
+                    "description": "Page 为当前页码。",
+                    "type": "integer",
+                    "example": 1
                 },
                 "prev_page": {
-                    "type": "integer"
+                    "description": "PrevPage 为上一页页码，无上一页时为 0。",
+                    "type": "integer",
+                    "example": 0
                 },
                 "size": {
-                    "type": "integer"
+                    "description": "Size 为当前页分页大小。",
+                    "type": "integer",
+                    "example": 20
                 },
                 "total": {
-                    "type": "integer"
+                    "description": "Total 为满足条件的总记录数。",
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
@@ -1643,39 +1676,61 @@
             "type": "object",
             "properties": {
                 "batch_text": {
-                    "$ref": "#/definitions/response.BatchTextConversionDetailResponse"
+                    "description": "BatchText 为批量文本转换详情，仅 conversion_type=batch_text 时有值。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.BatchTextConversionDetailResponse"
+                        }
+                    ]
                 },
                 "batch_text_conversion_id": {
-                    "description": "BatchTextConversionID 为关联的批量转换表记录 ID，可为空。link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值。",
+                    "description": "BatchTextConversionID 为关联的批量转换表记录 ID，可为空。LinkID、BatchTextConversionID、UploadedFileID 三个字段在每条记录中必须且只能有一个字段有值。",
                     "type": "integer"
                 },
                 "conversion_type": {
-                    "type": "string"
+                    "description": "ConversionType 为转换记录类型，可选值为 single_link、batch_text、document_file。",
+                    "type": "string",
+                    "enum": [
+                        "single_link",
+                        "batch_text",
+                        "document_file"
+                    ],
+                    "example": "single_link"
                 },
                 "created_at": {
                     "description": "CreatedAt 为创建时间。",
                     "type": "string"
                 },
                 "document_file": {
-                    "$ref": "#/definitions/response.DocumentFileConversionDetailResponse"
+                    "description": "DocumentFile 为文档文件转换详情，仅 conversion_type=document_file 时有值。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.DocumentFileConversionDetailResponse"
+                        }
+                    ]
                 },
                 "id": {
                     "description": "ID 为主键 ID。",
                     "type": "integer"
                 },
                 "link_id": {
-                    "description": "LinkID 为关联的单链接转换记录 ID，可为空。link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值。",
+                    "description": "LinkID 为关联的单链接转换记录 ID，可为空。LinkID、BatchTextConversionID、UploadedFileID 三个字段在每条记录中必须且只能有一个字段有值。",
                     "type": "integer"
                 },
                 "single_link": {
-                    "$ref": "#/definitions/response.SingleLinkConversionDetailResponse"
+                    "description": "SingleLink 为单链接转换详情，仅 conversion_type=single_link 时有值。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.SingleLinkConversionDetailResponse"
+                        }
+                    ]
                 },
                 "updated_at": {
                     "description": "UpdatedAt 为更新时间。",
                     "type": "string"
                 },
                 "uploaded_file_id": {
-                    "description": "UploadedFileID 为关联的文档文件上传表记录 ID，可为空。link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值。",
+                    "description": "UploadedFileID 为关联的文档文件上传表记录 ID，可为空。LinkID、BatchTextConversionID、UploadedFileID 三个字段在每条记录中必须且只能有一个字段有值。",
                     "type": "integer"
                 }
             }
@@ -1692,7 +1747,9 @@
                     "type": "string"
                 },
                 "download_url": {
-                    "type": "string"
+                    "description": "DownloadURL 为文档文件转换结果下载地址。\n当列表或搜索接口携带 Authorization 请求头时，返回值会自动拼接 authorization 查询参数，便于前端直接打开下载链接。",
+                    "type": "string",
+                    "example": "http://localhost:9000/api/document-file/20/download"
                 },
                 "file_id": {
                     "description": "FileID 为原始文件 ID。",
@@ -1735,7 +1792,12 @@
                     "type": "string"
                 },
                 "uploaded_file": {
-                    "$ref": "#/definitions/model.StoredFile"
+                    "description": "UploadedFile 为文档转换任务的原始上传文件信息。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.StoredFile"
+                        }
+                    ]
                 }
             }
         },

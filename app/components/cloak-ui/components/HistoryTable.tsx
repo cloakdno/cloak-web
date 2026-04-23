@@ -583,11 +583,11 @@ export function HistoryTable({
               )}
               <button
                 onClick={() => {
-                  if (window.confirm(`确定删除这 ${groupRecognizedCount} 条链接？`)) onDeleteGroup(group.batchId)
+                  if (window.confirm('确定删除该任务？')) onDeleteGroup(group.batchId)
                 }}
                 disabled={actionDisabled}
                 className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
-                title="删除全部"
+                title="删除任务"
               >
                 <Trash2 size={16} />
               </button>
@@ -671,13 +671,13 @@ export function HistoryTable({
                   <div className="h-px bg-gray-100 my-1 mx-2" />
                   <button
                     onClick={() => {
-                      if (window.confirm(`确定删除这 ${groupRecognizedCount} 条链接？`)) onDeleteGroup(group.batchId)
+                      if (window.confirm('确定删除该任务？')) onDeleteGroup(group.batchId)
                       setOpenMenuId(null)
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                   >
                     <Trash2 size={14} />
-                    删除全部
+                    删除任务
                   </button>
                 </div>
               )}

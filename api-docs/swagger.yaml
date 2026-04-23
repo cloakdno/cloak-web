@@ -153,6 +153,10 @@ definitions:
         description: CreatedAt 为创建时间。
         type: string
       download_url:
+        description: |-
+          DownloadURL 为批量文本转换结果下载地址。
+          当列表或搜索接口携带 Authorization 请求头时，返回值会自动拼接 authorization 查询参数，便于前端直接打开下载链接。
+        example: http://localhost:9000/api/batch-text/12/download
         type: string
       id:
         description: ID 为主键 ID。
@@ -218,51 +222,81 @@ definitions:
   response.ConversionPageResponse:
     properties:
       has_next:
+        description: HasNext 表示是否存在下一页。
+        example: false
         type: boolean
       has_prev:
+        description: HasPrev 表示是否存在上一页。
+        example: false
         type: boolean
       items:
+        description: Items 为当前页转换记录列表。
         items:
           $ref: '#/definitions/response.ConversionRecordItemResponse'
         type: array
       next_page:
+        description: NextPage 为下一页页码，无下一页时为 0。
+        example: 0
         type: integer
       page:
+        description: Page 为当前页码。
+        example: 1
         type: integer
       prev_page:
+        description: PrevPage 为上一页页码，无上一页时为 0。
+        example: 0
         type: integer
       size:
+        description: Size 为当前页分页大小。
+        example: 20
         type: integer
       total:
+        description: Total 为满足条件的总记录数。
+        example: 3
         type: integer
     type: object
   response.ConversionRecordItemResponse:
     properties:
       batch_text:
-        $ref: '#/definitions/response.BatchTextConversionDetailResponse'
+        allOf:
+        - $ref: '#/definitions/response.BatchTextConversionDetailResponse'
+        description: BatchText 为批量文本转换详情，仅 conversion_type=batch_text 时有值。
       batch_text_conversion_id:
-        description: BatchTextConversionID 为关联的批量转换表记录 ID，可为空。link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值。
+        description: BatchTextConversionID 为关联的批量转换表记录 ID，可为空。LinkID、BatchTextConversionID、UploadedFileID
+          三个字段在每条记录中必须且只能有一个字段有值。
         type: integer
       conversion_type:
+        description: ConversionType 为转换记录类型，可选值为 single_link、batch_text、document_file。
+        enum:
+        - single_link
+        - batch_text
+        - document_file
+        example: single_link
         type: string
       created_at:
         description: CreatedAt 为创建时间。
         type: string
       document_file:
-        $ref: '#/definitions/response.DocumentFileConversionDetailResponse'
+        allOf:
+        - $ref: '#/definitions/response.DocumentFileConversionDetailResponse'
+        description: DocumentFile 为文档文件转换详情，仅 conversion_type=document_file 时有值。
       id:
         description: ID 为主键 ID。
         type: integer
       link_id:
-        description: LinkID 为关联的单链接转换记录 ID，可为空。link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值。
+        description: LinkID 为关联的单链接转换记录 ID，可为空。LinkID、BatchTextConversionID、UploadedFileID
+          三个字段在每条记录中必须且只能有一个字段有值。
         type: integer
       single_link:
-        $ref: '#/definitions/response.SingleLinkConversionDetailResponse'
+        allOf:
+        - $ref: '#/definitions/response.SingleLinkConversionDetailResponse'
+        description: SingleLink 为单链接转换详情，仅 conversion_type=single_link 时有值。
       updated_at:
         description: UpdatedAt 为更新时间。
         type: string
       uploaded_file_id:
-        description: UploadedFileID 为关联的文档文件上传表记录 ID，可为空。link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值。
+        description: UploadedFileID 为关联的文档文件上传表记录 ID，可为空。LinkID、BatchTextConversionID、UploadedFileID
+          三个字段在每条记录中必须且只能有一个字段有值。
         type: integer
     type: object
   response.DocumentFileConversionDetailResponse:
@@ -274,6 +308,10 @@ definitions:
         description: CreatedAt 为创建时间。
         type: string
       download_url:
+        description: |-
+          DownloadURL 为文档文件转换结果下载地址。
+          当列表或搜索接口携带 Authorization 请求头时，返回值会自动拼接 authorization 查询参数，便于前端直接打开下载链接。
+        example: http://localhost:9000/api/document-file/20/download
         type: string
       file_id:
         description: FileID 为原始文件 ID。
@@ -302,7 +340,9 @@ definitions:
         description: UpdatedAt 为更新时间。
         type: string
       uploaded_file:
-        $ref: '#/definitions/model.StoredFile'
+        allOf:
+        - $ref: '#/definitions/model.StoredFile'
+        description: UploadedFile 为文档转换任务的原始上传文件信息。
     type: object
   response.DocumentFileSubmitResponse:
     properties:
@@ -701,14 +741,23 @@ paths:
       - batch-text
   /api/conversions:
     get:
-      description: 按页码和页大小分页查询历史转换记录。列表项根对象字段 id/link_id/batch_text_conversion_id/uploaded_file_id/created_at/updated_at 对应 conversion_records。link_id 允许为空，且 link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值；single_link 详情仅在 conversion_type=single_link 时返回。
+      description: 按页码和页大小分页查询历史转换记录。列表项根对象字段 id/link_id/batch_text_conversion_id/uploaded_file_id/created_at/updated_at
+        对应 conversion_records。link_id 允许为空，且 link_id、batch_text_conversion_id、uploaded_file_id
+        三者必须且只能有一个有值；single_link 详情仅在 conversion_type=single_link 时返回。
       parameters:
-      - description: 页码（从 1 开始）
+      - default: 1
+        description: 页码（从 1 开始）
+        example: 1
         in: query
+        minimum: 1
         name: page
         type: integer
-      - description: 每页条数
+      - default: 20
+        description: 每页条数
+        example: 20
         in: query
+        maximum: 100
+        minimum: 1
         name: size
         type: integer
       produces:
@@ -737,18 +786,28 @@ paths:
       - conversions
   /api/conversions/search:
     get:
-      description: 根据关键字搜索转换记录，并分页返回结果。搜索范围包含单链接详情、批量文本任务关联短链、文档文件任务关联短链以及文档源文件名。字段语义与 /api/conversions 一致。
+      description: 根据关键字搜索转换记录，并分页返回结果。搜索范围包含单链接详情、批量文本任务关联短链、文档文件任务关联短链以及文档源文件名。字段语义与
+        /api/conversions 一致。
       parameters:
-      - description: 搜索关键词
+      - description: 搜索关键词，不能为空，支持文件名、短链码、原始链接
+        example: source.txt
         in: query
         name: keyword
+        required: true
         type: string
-      - description: 页码（从 1 开始）
+      - default: 1
+        description: 页码（从 1 开始）
+        example: 1
         in: query
+        minimum: 1
         name: page
         type: integer
-      - description: 每页条数
+      - default: 20
+        description: 每页条数
+        example: 20
         in: query
+        maximum: 100
+        minimum: 1
         name: size
         type: integer
       produces:

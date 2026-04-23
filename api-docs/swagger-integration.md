@@ -276,7 +276,63 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
 }
 ```
 
-### 4.6 转换记录字段策略（前端必读）
+### 4.6 转换记录搜索
+
+请求：GET /api/conversions/search?keyword=source&page=1&size=20
+
+说明：
+
+- `keyword` 必填，空字符串会返回 `400`
+- 搜索范围包含单链接详情、批量文本任务关联短链、文档文件任务关联短链以及文档源文件名
+- 若请求头包含 `Authorization`，响应内的 `download_url` 会自动追加 `authorization` 查询参数，便于前端直接打开下载页
+
+成功响应（示例）：
+
+```json
+{
+  "items": [
+    {
+      "id": 103,
+      "link_id": null,
+      "batch_text_conversion_id": null,
+      "uploaded_file_id": 30,
+      "conversion_type": "document_file",
+      "document_file": {
+        "id": 20,
+        "file_id": 30,
+        "converted_file_id": 31,
+        "recognized_link_count": 1,
+        "status": "success",
+        "total_visit_count": 0,
+        "response_mode": "redirect",
+        "created_at": "2026-04-24T14:20:00Z",
+        "updated_at": "2026-04-24T14:32:00Z",
+        "download_url": "http://localhost:9000/api/document-file/20/download",
+        "uploaded_file": {
+          "id": 30,
+          "file_name": "source.txt",
+          "save_directory": "storage/uploads/source_xxx.txt",
+          "file_type": "text/plain",
+          "file_size": 128,
+          "created_at": "2026-04-24T14:20:00Z",
+          "updated_at": "2026-04-24T14:20:00Z"
+        }
+      },
+      "created_at": "2026-04-24T14:32:00Z",
+      "updated_at": "2026-04-24T14:32:00Z"
+    }
+  ],
+  "page": 1,
+  "size": 20,
+  "next_page": 0,
+  "prev_page": 0,
+  "has_next": false,
+  "has_prev": false,
+  "total": 1
+}
+```
+
+### 4.7 转换记录字段策略（前端必读）
 
 - 批量文本任务提交接口 `POST /api/batch-text/batch`：每个任务仅写入 1 条 `conversion_records` 记录。
 - 转换列表接口 `GET /api/conversions` 与 `GET /api/conversions/search`：
@@ -286,6 +342,7 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
   - `batch_text.created_at`、`batch_text.updated_at`、`batch_text.total_visit_count`、`batch_text.recognized_link_count`、`batch_text.status`、`batch_text.response_mode` 与数据库 `batch_text_conversions` 保持一致。
   - `batch_text.source_text` 固定返回空字符串 `""`。
   - `batch_text.converted_text` 固定返回空字符串 `""`。
+  - `batch_text.download_url`、`document_file.download_url` 在列表/搜索接口中会继承当前请求的 BasicAuth，并自动追加为 `authorization` 查询参数。
 - 设计目的：避免在分页列表中返回超大文本，降低接口响应体积，提升页面加载速度。
 
 字段迁移说明：
@@ -418,6 +475,9 @@ go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs --parseDep
 2. GET /api/conversions/search?keyword=xxx&page=1&size=20（搜索时触发）
 
 处理建议：
+
+- 渲染时优先根据 `conversion_type` 分支读取 `single_link`、`batch_text`、`document_file`，不要假设三类详情会同时存在。
+- 对批量文本和文档文件卡片，可直接使用响应中的 `download_url`；该链接在列表/搜索接口中已自动附带当前 BasicAuth 信息。
 
 - 使用返回的 has_next、has_prev、next_page、prev_page 驱动分页控件。
 - 搜索关键词变更时重置到第 1 页。
