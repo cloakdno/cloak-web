@@ -10,7 +10,6 @@ import { FileConvert } from './components/FileConvert'
 import { HistoryTable } from './components/HistoryTable'
 import { EditModal } from './components/EditModal'
 import { LoginPage } from './components/LoginPage'
-import { VisitLogModal } from './components/VisitLogModal'
 import { ShortLink, ProxyMode, ConversionGroup } from './types/index'
 import { createShortLink, extractHttpUrls, generateMockVisits } from './utils/shortlink'
 import { 
@@ -75,7 +74,6 @@ export function App() {
   const [links, setLinks] = useState<ShortLink[]>([])
   const [editingLink, setEditingLink] = useState<ShortLink | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [visitLogLink, setVisitLogLink] = useState<ShortLink | null>(null)
   const [pendingConvert, setPendingConvert] = useState<PendingConvertAction | null>(null)
   const batchPollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const batchPollingAttemptsRef = useRef(0)
@@ -590,10 +588,6 @@ export function App() {
     }
   }
 
-  const handleBulkDelete = (ids: string[]) => {
-    setLinks((prev) => prev.filter((link) => !ids.includes(link.id)))
-  }
-
   const handleEdit = (link: ShortLink) => {
     setEditingLink(link)
     setIsEditModalOpen(true)
@@ -763,10 +757,6 @@ export function App() {
     window.open(downloadUrl, '_blank', 'noopener,noreferrer')
   }
 
-  const handleViewLogs = (link: ShortLink) => {
-    setVisitLogLink(link)
-  }
-
   const handleRefresh = async () => {
     // 从服务端重新加载历史记录
     if (!apiClient) return
@@ -890,9 +880,7 @@ export function App() {
             links={links}
             onDelete={handleDelete}
             onDeleteGroup={handleDeleteGroup}
-            onBulkDelete={handleBulkDelete}
             onEdit={handleEdit}
-            onViewLogs={handleViewLogs}
             onRefresh={handleRefresh}
             onToggleProxyMode={handleToggleProxyMode}
             onSearch={handleSearch}
@@ -932,8 +920,6 @@ export function App() {
         }}
         onSave={handleSaveEdit}
       />
-
-      <VisitLogModal link={visitLogLink!} isOpen={!!visitLogLink} onClose={() => setVisitLogLink(null)} />
 
       <AnimatePresence>
         {pendingConvert && (

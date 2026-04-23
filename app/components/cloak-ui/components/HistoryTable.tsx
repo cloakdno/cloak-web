@@ -31,11 +31,7 @@ interface HistoryTableProps {
   links: ShortLink[]
   onDelete: (id: string) => void
   onDeleteGroup: (batchId: string) => void
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onBulkDelete: (ids: string[]) => void
   onEdit: (link: ShortLink) => void
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onViewLogs: (link: ShortLink) => void
   onRefresh?: () => void
   onToggleProxyMode?: (ids: string[], newMode: ProxyMode) => void
   onSearch?: (keyword: string) => void
@@ -48,9 +44,7 @@ export function HistoryTable({
   links,
   onDelete,
   onDeleteGroup,
-  onBulkDelete,
   onEdit,
-  onViewLogs,
   onRefresh,
   onToggleProxyMode,
   onSearch,
@@ -72,7 +66,7 @@ export function HistoryTable({
   const [searchInput, setSearchInput] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [viewingBatchGroup, setViewingBatchGroup] =
+  const [viewingTaskGroup, setViewingTaskGroup] =
     useState<ConversionGroup | null>(null)
   const [viewingBatchDetail, setViewingBatchDetail] =
     useState<BatchTextDetailResponse | null>(null)
@@ -116,6 +110,13 @@ export function HistoryTable({
     setTimeout(() => setCopiedId(null), 2000)
   }
 
+  const buildTaskGroup = (link: ShortLink): ConversionGroup => ({
+    batchId: link.batchId,
+    source: link.source,
+    links: [link],
+    createdAt: link.createdAt,
+  })
+
   const handleDownloadGroup = (group: ConversionGroup) => {
     const text = group.links
       .map((l) => `${l.originalUrl} -> ${l.shortUrl}`)
@@ -132,16 +133,16 @@ export function HistoryTable({
     URL.revokeObjectURL(url)
   }
 
-  const getGroupTaskId = (group: ConversionGroup) => {
+  const getTaskId = (group: ConversionGroup) => {
     return group.links.find((link) => typeof link.taskId === 'number')?.taskId
   }
 
-  const openBatchGroup = async (group: ConversionGroup) => {
-    setViewingBatchGroup(group)
+  const openTaskDetail = async (group: ConversionGroup) => {
+    setViewingTaskGroup(group)
     setViewingBatchDetail(null)
     setBatchDetailError(null)
 
-    const taskId = getGroupTaskId(group)
+    const taskId = getTaskId(group)
     if (typeof taskId !== 'number' || !onViewBatchDetail) {
       setBatchDetailError('未找到批量任务详情')
       return
@@ -160,8 +161,8 @@ export function HistoryTable({
     }
   }
 
-  const closeBatchGroup = () => {
-    setViewingBatchGroup(null)
+  const closeTaskDetail = () => {
+    setViewingTaskGroup(null)
     setViewingBatchDetail(null)
     setBatchDetailError(null)
     setIsBatchDetailLoading(false)
@@ -283,9 +284,6 @@ export function HistoryTable({
   }
 
   const isLinkConverting = (link: ShortLink) => link.status === 'converting'
-  const isGroupConverting = (group: ConversionGroup) =>
-    group.links.some((l) => l.status === 'converting')
-
   const renderSingleRow = (link: ShortLink, idx: number) => {
     const converting = isLinkConverting(link)
     const actionDisabled = converting
@@ -474,13 +472,14 @@ export function HistoryTable({
     )
   }
 
-  const renderGroupRow = (group: ConversionGroup, idx: number) => {
-    const isFile = group.source === 'file'
-    const converting = isGroupConverting(group)
+  const renderGroupRow = (link: ShortLink, idx: number) => {
+    const group = buildTaskGroup(link)
+    const isFile = link.source === 'file'
+    const converting = link.status === 'converting'
     const actionDisabled = converting
-    const rowKey = group.links[0]?.id || group.batchId
-    const groupIds = group.links.map((l) => l.id)
-    const groupMode = group.links[0]?.proxyMode
+    const rowKey = link.id
+    const groupIds = [link.id]
+    const groupMode = link.proxyMode
     const groupRecognizedCount = getGroupRecognizedCount(group)
     const isMenuOpen = openMenuId === rowKey
 
@@ -527,7 +526,7 @@ export function HistoryTable({
           </span>
         </td>
         <td className="p-4 hidden lg:table-cell text-sm text-gray-500">
-          {formatCreatedTime(group.createdAt)}
+          {formatCreatedTime(link.createdAt)}
         </td>
         <td className="p-4 hidden sm:table-cell">
           {converting ? (
@@ -572,7 +571,7 @@ export function HistoryTable({
                 </button>
               ) : (
                 <button
-                  onClick={() => void openBatchGroup(group)}
+                  onClick={() => void openTaskDetail(group)}
                   disabled={actionDisabled}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-orange-50"
                   title="查看转换结果"
@@ -630,7 +629,7 @@ export function HistoryTable({
                   ) : (
                     <button
                       onClick={() => {
-                        void openBatchGroup(group)
+                        void openTaskDetail(group)
                         setOpenMenuId(null)
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -753,15 +752,7 @@ export function HistoryTable({
               {paginatedLinks.map((link, idx) =>
                 link.source === 'single'
                   ? renderSingleRow(link, idx)
-                  : renderGroupRow(
-                      {
-                        batchId: link.batchId,
-                        source: link.source,
-                        links: [link],
-                        createdAt: link.createdAt,
-                      },
-                      idx,
-                    ),
+                  : renderGroupRow(link, idx),
               )}
             </tbody>
           </table>
@@ -794,14 +785,14 @@ export function HistoryTable({
       </div>
 
       <BatchViewModal
-        group={viewingBatchGroup}
+        group={viewingTaskGroup}
         detail={viewingBatchDetail}
         isLoading={isBatchDetailLoading}
         errorMessage={batchDetailError}
-        isOpen={!!viewingBatchGroup}
-        onClose={closeBatchGroup}
+        isOpen={!!viewingTaskGroup}
+        onClose={closeTaskDetail}
         onDownload={() => {
-          const downloadUrl = viewingBatchGroup?.links.find(
+          const downloadUrl = viewingTaskGroup?.links.find(
             (link) => typeof link.downloadUrl === 'string' && link.downloadUrl.length > 0,
           )?.downloadUrl
           if (downloadUrl) {
@@ -809,7 +800,7 @@ export function HistoryTable({
             return
           }
 
-          const taskId = viewingBatchGroup ? getGroupTaskId(viewingBatchGroup) : undefined
+          const taskId = viewingTaskGroup ? getTaskId(viewingTaskGroup) : undefined
           if (typeof taskId !== 'number') {
             toast.error('未找到批量任务下载地址')
             return
@@ -966,7 +957,7 @@ export function HistoryTable({
                         访问量
                       </span>
                       <p className="mt-1 text-sm text-gray-800">
-                        {(viewingDetails.visits || []).length} 次
+                        {getSingleVisitCount(viewingDetails)} 次
                       </p>
                     </div>
                   </div>
