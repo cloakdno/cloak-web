@@ -3,7 +3,7 @@ import { ArrowRight, Link as LinkIcon } from 'lucide-react'
 import { isValidUrl } from '../utils/shortlink'
 
 interface SingleConvertProps {
-  onConvert: (url: string) => void
+  onConvert: (url: string, options?: { onConfirm?: () => void }) => void
 }
 
 export function SingleConvert({ onConvert }: SingleConvertProps) {
@@ -28,8 +28,9 @@ export function SingleConvert({ onConvert }: SingleConvertProps) {
     }
 
     setError('')
-    onConvert(finalUrl)
-    setUrl('')
+    onConvert(finalUrl, {
+      onConfirm: () => setUrl(''),
+    })
   }
 
   return (

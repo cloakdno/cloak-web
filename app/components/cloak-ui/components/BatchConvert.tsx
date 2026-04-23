@@ -4,7 +4,7 @@ import { extractHttpUrls, isValidUrl } from '../utils/shortlink'
 import { FormatTip } from './FormatTip'
 
 interface BatchConvertProps {
-  onConvert: (sourceText: string) => void
+  onConvert: (sourceText: string, options?: { onConfirm?: () => void }) => void
 }
 
 export function BatchConvert({ onConvert }: BatchConvertProps) {
@@ -42,10 +42,13 @@ export function BatchConvert({ onConvert }: BatchConvertProps) {
 
     setError('')
     // 提交用户的完整输入文本，链接提取由后端统一处理。
-    onConvert(text)
-    setText('')
-    setSuccess(true)
-    setTimeout(() => setSuccess(false), 3000)
+    onConvert(text, {
+      onConfirm: () => {
+        setText('')
+        setSuccess(true)
+        setTimeout(() => setSuccess(false), 3000)
+      },
+    })
   }
 
   return (

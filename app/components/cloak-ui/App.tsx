@@ -46,6 +46,11 @@ import toast from 'react-hot-toast'
 
 type Tab = 'single' | 'batch' | 'file'
 
+interface PendingConvertAction {
+  run: () => void
+  onConfirm?: () => void
+}
+
 const STORAGE_KEY = 'cloak-links-history'
 /** localStorage key，值为 JSON 序列化的 { username: string; password: string } */
 const AUTH_KEY = 'cloak-auth-user'
@@ -71,7 +76,7 @@ export function App() {
   const [editingLink, setEditingLink] = useState<ShortLink | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [visitLogLink, setVisitLogLink] = useState<ShortLink | null>(null)
-  const [pendingConvert, setPendingConvert] = useState<(() => void) | null>(null)
+  const [pendingConvert, setPendingConvert] = useState<PendingConvertAction | null>(null)
   const batchPollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const batchPollingAttemptsRef = useRef(0)
 
@@ -841,16 +846,26 @@ export function App() {
 
           <AnimatePresence mode="wait">
             {activeTab === 'single' && (
-              <SingleConvert key="single" onConvert={(url) => setPendingConvert(() => () => handleSingleConvert(url))} />
+              <SingleConvert
+                key="single"
+                onConvert={(url, options) =>
+                  setPendingConvert({ run: () => handleSingleConvert(url), onConfirm: options?.onConfirm })
+                }
+              />
             )}
             {activeTab === 'batch' && (
-              <BatchConvert key="batch" onConvert={(sourceText) => setPendingConvert(() => () => handleBatchConvert(sourceText))} />
+              <BatchConvert
+                key="batch"
+                onConvert={(sourceText, options) =>
+                  setPendingConvert({ run: () => handleBatchConvert(sourceText), onConfirm: options?.onConfirm })
+                }
+              />
             )}
             {activeTab === 'file' && (
               <FileConvert
                 key="file"
-                onConvert={(file, urls) =>
-                  setPendingConvert(() => () => handleFileConvert(file, urls))
+                onConvert={(file, urls, options) =>
+                  setPendingConvert({ run: () => handleFileConvert(file, urls), onConfirm: options?.onConfirm })
                 }
               />
             )}
@@ -970,7 +985,8 @@ export function App() {
                 </button>
                 <button
                   onClick={() => {
-                    pendingConvert()
+                    pendingConvert.run()
+                    pendingConvert.onConfirm?.()
                     setPendingConvert(null)
                   }}
                   className={`flex-1 px-4 py-2.5 rounded-xl text-white font-medium text-sm transition-colors ${proxyMode === 'redirect' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-violet-600 hover:bg-violet-700'}`}

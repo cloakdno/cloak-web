@@ -23,7 +23,7 @@ import {
   X,
 } from 'lucide-react'
 import { ShortLink, ConversionGroup, ProxyMode } from '../types'
-import { formatDate, groupLinksByBatch } from '../utils/shortlink'
+import { groupLinksByBatch } from '../utils/shortlink'
 import { BatchViewModal } from './BatchViewModal'
 import { BatchTextDetailResponse } from '@/app/lib/api'
 import toast from 'react-hot-toast'
@@ -59,6 +59,17 @@ export function HistoryTable({
   onViewBatchDetail,
   onOpenBatchDownload,
 }: HistoryTableProps) {
+  const formatCreatedTime = (timestamp: number) => {
+    const date = new Date(timestamp)
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const hour = String(date.getHours()).padStart(2, '0')
+    const minute = String(date.getMinutes()).padStart(2, '0')
+
+    return `${year}/${month}/${day} ${hour}:${minute}`
+  }
+
   const [searchInput, setSearchInput] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -163,10 +174,17 @@ export function HistoryTable({
     )?.totalVisitCount
     if (typeof taskTotal === 'number') return taskTotal
 
+    if (group.source === 'batch' || group.source === 'file') return 0
+
     const total = group.links.reduce((sum, l) => sum + (l.visits || []).length, 0)
     if (total >= 10000) return `${(total / 10000).toFixed(1).replace(/\.0$/, '')}w`
     if (total >= 1000) return `${(total / 1000).toFixed(1).replace(/\.0$/, '')}k`
     return total
+  }
+
+  const getSingleVisitCount = (link: ShortLink) => {
+    if (typeof link.totalVisitCount === 'number') return link.totalVisitCount
+    return (link.visits || []).length
   }
 
   const getGroupRecognizedCount = (group: ConversionGroup) => {
@@ -311,7 +329,7 @@ export function HistoryTable({
           </div>
         </td>
         <td className="p-4 hidden lg:table-cell text-sm text-gray-500">
-          {formatDate(link.createdAt)}
+          {formatCreatedTime(link.createdAt)}
         </td>
         <td className="p-4 hidden sm:table-cell">
           {converting ? (
@@ -329,7 +347,7 @@ export function HistoryTable({
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-600 rounded-lg text-sm font-medium">
               <BarChart3 size={14} />
-              {(link.visits || []).length}
+              {getSingleVisitCount(link)}
             </span>
           )}
         </td>
@@ -513,7 +531,7 @@ export function HistoryTable({
           </span>
         </td>
         <td className="p-4 hidden lg:table-cell text-sm text-gray-500">
-          {formatDate(group.createdAt)}
+          {formatCreatedTime(group.createdAt)}
         </td>
         <td className="p-4 hidden sm:table-cell">
           {converting ? (
@@ -928,7 +946,7 @@ export function HistoryTable({
                         创建时间
                       </span>
                       <p className="mt-1 text-sm text-gray-800">
-                        {formatDate(viewingDetails.createdAt)}
+                        {formatCreatedTime(viewingDetails.createdAt)}
                       </p>
                     </div>
                     <div>
@@ -1005,7 +1023,7 @@ export function HistoryTable({
                         创建时间
                       </span>
                       <p className="mt-1 text-sm text-gray-800">
-                        {formatDate(viewingDetails.createdAt)}
+                        {formatCreatedTime(viewingDetails.createdAt)}
                       </p>
                     </div>
                     <div>
