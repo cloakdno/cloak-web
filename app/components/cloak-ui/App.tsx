@@ -57,6 +57,8 @@ const BATCH_POLL_INTERVAL_MS = 3000
 const BATCH_POLL_MAX_ATTEMPTS = 40
 
 export function App() {
+  // 标记是否已完成本地登录凭证恢复，避免首屏先渲染演示数据再被服务端覆盖。
+  const [authHydrated, setAuthHydrated] = useState(false)
   const [user, setUser] = useState<string | null>(null)
   const [authPassword, setAuthPassword] = useState<string | null>(null)
   /** 已认证的 API 客户端，登录后创建，登出时清除 */
@@ -124,21 +126,22 @@ export function App() {
       if (raw) {
         const { username: u, password: p } = JSON.parse(raw) as { username: string; password: string }
         if (u && p) {
-          queueMicrotask(() => {
-            setUser(u)
-            setAuthPassword(p)
-            setApiClient(createApiClient(u, p))
-          })
+          setUser(u)
+          setAuthPassword(p)
+          setApiClient(createApiClient(u, p))
         }
       }
     } catch {
       // 旧格式或损坏数据，忽略并清除
       localStorage.removeItem(AUTH_KEY)
+    } finally {
+      setAuthHydrated(true)
     }
   }, [])
 
   useEffect(() => {
     // 仅在未登录（无 apiClient）时加载演示数据，已登录用户的历史由服务端加载
+    if (!authHydrated) return
     if (apiClient) return
 
     const stored = localStorage.getItem(STORAGE_KEY)
@@ -220,7 +223,7 @@ export function App() {
     ]
 
     setLinks(demoLinks)
-  }, [apiClient])
+  }, [authHydrated, apiClient])
 
   useEffect(() => {
     if (!apiClient) return
@@ -283,9 +286,10 @@ export function App() {
 
   useEffect(() => {
     // 登录态历史由服务端驱动，避免把“搜索结果子集”持久化到本地缓存。
+    if (!authHydrated) return
     if (apiClient) return
     localStorage.setItem(STORAGE_KEY, JSON.stringify(links))
-  }, [apiClient, links])
+  }, [authHydrated, apiClient, links])
 
   const handleLogin = (username: string, pw: string) => {
     setUser(username)
