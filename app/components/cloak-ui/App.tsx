@@ -18,6 +18,7 @@ import {
   ApiClient, 
   ApiError,
   convertSingleLink,
+  batchConvertLinks,
   listConversions,
   searchConversions,
   deleteLink,
@@ -25,6 +26,7 @@ import {
   updateLinkResponseMode,
   mapSingleLinkConvertResponse,
   mapConversionRecordToShortLink,
+  mapBatchHideItemResponse,
 } from '@/app/lib/api'
 import { Send, ArrowRightLeft, Globe } from 'lucide-react'
 
@@ -244,7 +246,12 @@ export function App() {
     }
   }
 
-  const handleBatchConvert = (urls: string[]) => {
+  const handleBatchConvert = async (urls: string[]) => {
+    if (!apiClient) {
+      console.error('API client not initialized')
+      return
+    }
+
     const batchId = crypto.randomUUID()
     const newLinks = urls.map((url) => {
       const link = createShortLink(url, 'batch', batchId, proxyMode)
@@ -254,19 +261,53 @@ export function App() {
 
     setLinks((prev) => [...newLinks, ...prev])
 
-    setTimeout(() => {
-      setLinks((prev) =>
-        prev.map((l) =>
-          l.batchId === batchId && l.status === 'converting'
-            ? {
-                ...l,
-                status: 'done' as const,
-                visits: generateMockVisits(Math.floor(Math.random() * 15)),
-              }
-            : l,
-        ),
-      )
-    }, 1200)
+    try {
+      // 调用后端批量转换接口；后端会逐条返回成功/失败结果。
+      const apiResponse = await batchConvertLinks(apiClient, {
+        urls,
+        response_mode: proxyMode,
+      })
+
+      // 仅保留成功项并映射为 UI 记录；失败项不入列表，同时统一给出失败提示。
+      const successLinks = apiResponse.items
+        .filter((item) => !item.fail_cause || item.fail_cause.trim().length === 0)
+        .map((item, index) => {
+          const mapped = mapBatchHideItemResponse(item, batchId)
+          return {
+            ...mapped,
+            // 同一 URL 可能重复提交，需确保每条记录 ID 唯一，避免 React key 冲突。
+            id: `${mapped.id}-${index}`,
+            status: 'done' as const,
+          }
+        })
+
+      setLinks((prev) => {
+        // 移除本次批量任务的临时“转换中”占位项，替换为真实成功结果。
+        const withoutPending = prev.filter(
+          (link) => !(link.batchId === batchId && link.status === 'converting'),
+        )
+        return [...successLinks, ...withoutPending]
+      })
+
+      const failedCount = apiResponse.items.length - successLinks.length
+      if (failedCount > 0) {
+        window.alert(`批量转换完成，成功 ${successLinks.length} 条，失败 ${failedCount} 条。`)
+      }
+    } catch (err) {
+      // 批量接口整体失败时，回滚本次临时占位项。
+      setLinks((prev) => prev.filter((link) => link.batchId !== batchId))
+
+      let errorMsg = '批量转换失败，请重试'
+      if (err instanceof ApiError) {
+        if (err.status === 401 || err.status === 403) {
+          errorMsg = '认证过期，请重新登录'
+        } else {
+          errorMsg = `${err.message} (${err.code})`
+        }
+      }
+      window.alert(errorMsg)
+      console.error('Batch convert failed:', err)
+    }
   }
 
   const handleFileConvert = (urls: string[]) => {
