@@ -6,7 +6,8 @@
  * - 持有 BasicAuth 凭证（username + password），自动在每个请求中注入 Authorization header
  * - 统一封装 GET / POST / PUT / DELETE / 多部分表单（postForm）
  * - 将后端 4xx/5xx 响应解析并抛出 ApiError，供上层业务逻辑统一捕获
- * - baseUrl 优先使用构造参数，其次读取环境变量 NEXT_PUBLIC_API_BASE_URL，默认空字符串（相对路径）
+ * - baseUrl 优先使用构造参数；服务端读取 API_BASE_URL，客户端读取 NEXT_PUBLIC_API_BASE_URL
+ * - 若未配置，默认空字符串（相对路径）
  */
 
 import type { ErrorResponse } from "./types";
@@ -43,18 +44,39 @@ export interface ApiClientOptions {
   baseUrl?: string;
 }
 
+/**
+ * 解析 API 根地址：
+ * - 1) 显式传参（优先级最高）
+ * - 2) 服务端：API_BASE_URL -> NEXT_PUBLIC_API_BASE_URL
+ * - 3) 客户端：NEXT_PUBLIC_API_BASE_URL
+ * - 4) 默认空字符串（相对路径）
+ */
+function resolveApiBaseUrl(baseUrl?: string): string {
+  if (typeof baseUrl === "string") {
+    return baseUrl;
+  }
+
+  if (typeof process === "undefined") {
+    return "";
+  }
+
+  // 浏览器侧只能读取 NEXT_PUBLIC_ 前缀变量
+  if (typeof window !== "undefined") {
+    return process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+  }
+
+  // 服务端可读取私有变量，未配置时回退到 NEXT_PUBLIC_ 变量
+  return process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+}
+
 export class ApiClient {
   private readonly baseUrl: string;
   /** BasicAuth 凭证的 base64 编码，形如 "dXNlcjpwYXNz" */
   private readonly authHeader: string;
 
   constructor({ username, password, baseUrl }: ApiClientOptions) {
-    // 优先使用构造参数，其次读取 Next.js 公开环境变量，最后 fallback 空字符串（相对路径）
-    this.baseUrl =
-      baseUrl ??
-      (typeof process !== "undefined"
-        ? process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
-        : "");
+    // 统一解析 API 根地址（显式传参 > 环境变量 > 相对路径）
+    this.baseUrl = resolveApiBaseUrl(baseUrl);
 
     // 在浏览器环境使用 btoa，Node.js 环境使用 Buffer.from
     const credentials = `${username}:${password}`;
@@ -215,7 +237,9 @@ export class ApiClient {
 
 /**
  * 工厂函数，使用用户名和密码创建 ApiClient 实例。
- * baseUrl 可选，不传时自动读取 NEXT_PUBLIC_API_BASE_URL 环境变量。
+ * baseUrl 可选，不传时自动读取环境变量：
+ * - 服务端：API_BASE_URL（优先）或 NEXT_PUBLIC_API_BASE_URL
+ * - 客户端：NEXT_PUBLIC_API_BASE_URL
  *
  * @example
  * const api = createApiClient("admin", "password123");

@@ -12,10 +12,12 @@ import {
   Send,
   Eye,
   EyeOff,
+  Loader2,
 } from 'lucide-react'
+import { createApiClient, getUserProfile, ApiError } from '@/app/lib/api'
 
 interface LoginPageProps {
-  onLogin: (username: string) => void
+  onLogin: (username: string, password: string) => void
 }
 
 export function LoginPage({ onLogin }: LoginPageProps) {
@@ -23,9 +25,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const [showForgotModal, setShowForgotModal] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!username.trim()) {
       setError('请输入用户名')
@@ -35,8 +38,30 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       setError('请输入密码')
       return
     }
+
     setError('')
-    onLogin(username.trim())
+    setIsLoading(true)
+    try {
+      // 通过 BasicAuth 调用 GET /api/user/profile 验证凭证是否有效
+      const client = createApiClient(username.trim(), password.trim())
+      await getUserProfile(client)
+      // 验证通过，将用户名和密码传给父组件持久化
+      onLogin(username.trim(), password.trim())
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 401) {
+          setError('用户名或密码错误')
+        } else if (err.status === 403) {
+          setError('账户已被禁用或服务已过期')
+        } else {
+          setError(`登录失败：${err.message}`)
+        }
+      } else {
+        setError('网络异常，请检查连接后重试')
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const features = [
@@ -98,7 +123,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                     if (error) setError('')
                   }}
                   placeholder="请输入用户名"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-colors"
+                  disabled={isLoading}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -113,12 +139,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       if (error) setError('')
                     }}
                     placeholder="请输入密码"
-                    className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-colors"
+                    disabled={isLoading}
+                    className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    disabled={isLoading}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-60"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -129,17 +157,28 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
               <button
                 type="submit"
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
+                disabled={isLoading}
+                className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-70 disabled:cursor-not-allowed text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
               >
-                <LogIn size={18} />
-                登录
+                {isLoading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    验证中...
+                  </>
+                ) : (
+                  <>
+                    <LogIn size={18} />
+                    登录
+                  </>
+                )}
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <button
                 onClick={() => setShowForgotModal(true)}
-                className="text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors"
+                disabled={isLoading}
+                className="text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors disabled:opacity-60"
               >
                 忘记密码？
               </button>

@@ -13,15 +13,21 @@ import { LoginPage } from './components/LoginPage'
 import { VisitLogModal } from './components/VisitLogModal'
 import { ShortLink, ProxyMode } from './types/index'
 import { createShortLink, generateMockVisits } from './utils/shortlink'
+import { createApiClient, ApiClient } from '@/app/lib/api'
 import { Send, ArrowRightLeft, Globe } from 'lucide-react'
 
 type Tab = 'single' | 'batch' | 'file'
 
 const STORAGE_KEY = 'cloak-links-history'
+/** localStorage key，值为 JSON 序列化的 { username: string; password: string } */
 const AUTH_KEY = 'cloak-auth-user'
 
 export function App() {
   const [user, setUser] = useState<string | null>(null)
+  /** 登录密码，与 username 一起持久化，用于构建 apiClient */
+  const [password, setPassword] = useState<string | null>(null)
+  /** 已认证的 API 客户端，登录后创建，登出时清除 */
+  const [apiClient, setApiClient] = useState<ApiClient | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('single')
   const [proxyMode, setProxyMode] = useState<ProxyMode>('redirect')
   const [links, setLinks] = useState<ShortLink[]>([])
@@ -31,9 +37,20 @@ export function App() {
   const [pendingConvert, setPendingConvert] = useState<(() => void) | null>(null)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem(AUTH_KEY)
-    if (storedUser) {
-      setUser(storedUser)
+    // 从 localStorage 恢复登录凭证（JSON 格式：{ username, password }）
+    try {
+      const raw = localStorage.getItem(AUTH_KEY)
+      if (raw) {
+        const { username: u, password: p } = JSON.parse(raw) as { username: string; password: string }
+        if (u && p) {
+          setUser(u)
+          setPassword(p)
+          setApiClient(createApiClient(u, p))
+        }
+      }
+    } catch {
+      // 旧格式或损坏数据，忽略并清除
+      localStorage.removeItem(AUTH_KEY)
     }
   }, [])
 
@@ -122,13 +139,18 @@ export function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(links))
   }, [links])
 
-  const handleLogin = (username: string) => {
+  const handleLogin = (username: string, pw: string) => {
     setUser(username)
-    localStorage.setItem(AUTH_KEY, username)
+    setPassword(pw)
+    setApiClient(createApiClient(username, pw))
+    // 将用户名和密码序列化为 JSON 持久化，供下次刷新恢复 session
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ username, password: pw }))
   }
 
   const handleLogout = () => {
     setUser(null)
+    setPassword(null)
+    setApiClient(null)
     localStorage.removeItem(AUTH_KEY)
   }
 

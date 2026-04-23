@@ -1,3 +1,5 @@
+# Cloak Web
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -17,6 +19,25 @@ bun dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+## Backend API Environment Variables
+
+This project supports configuring backend API base URL via environment variables (`.env*` files are loaded by Next.js):
+
+```bash
+# browser/client side (must use NEXT_PUBLIC_ prefix)
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+
+# server side preferred variable (Server Components / Route Handlers)
+API_BASE_URL=http://localhost:8080
+```
+
+Priority when creating API client without explicit `baseUrl` argument:
+
+1. Explicit `baseUrl` argument
+2. Server side: `API_BASE_URL` then `NEXT_PUBLIC_API_BASE_URL`
+3. Client side: `NEXT_PUBLIC_API_BASE_URL`
+4. Fallback to relative path (`""`)
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
