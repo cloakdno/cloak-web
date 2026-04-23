@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, createElement } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import {
   Search,
   Trash2,
@@ -30,11 +30,14 @@ interface HistoryTableProps {
   links: ShortLink[]
   onDelete: (id: string) => void
   onDeleteGroup: (batchId: string) => void
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onBulkDelete: (ids: string[]) => void
   onEdit: (link: ShortLink) => void
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onViewLogs: (link: ShortLink) => void
   onRefresh?: () => void
   onToggleProxyMode?: (ids: string[], newMode: ProxyMode) => void
+  onSearch?: (keyword: string) => void
 }
 
 export function HistoryTable({
@@ -46,9 +49,9 @@ export function HistoryTable({
   onViewLogs,
   onRefresh,
   onToggleProxyMode,
+  onSearch,
 }: HistoryTableProps) {
   const [searchInput, setSearchInput] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [viewingBatchGroup, setViewingBatchGroup] =
@@ -76,11 +79,8 @@ export function HistoryTable({
   }, [])
 
   const itemsPerPage = 10
-  const filteredLinks = links.filter(
-    (link) =>
-      link.originalUrl.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      link.shortCode.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  // 搜索已在服务端处理，links 本身就是搜索结果或全部列表，无需本地过滤
+  const filteredLinks = links
   const groups = groupLinksByBatch(filteredLinks)
   const totalPages = Math.ceil(groups.length / itemsPerPage)
   const paginatedGroups = groups.slice(
@@ -556,7 +556,7 @@ export function HistoryTable({
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  setSearchTerm(searchInput)
+                  onSearch?.(searchInput)
                   setCurrentPage(1)
                 }
               }}
@@ -565,7 +565,7 @@ export function HistoryTable({
             {searchInput && (
               <button
                 onClick={() => {
-                  setSearchTerm(searchInput)
+                  onSearch?.(searchInput)
                   setCurrentPage(1)
                 }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-500 hover:text-purple-700 transition-colors"

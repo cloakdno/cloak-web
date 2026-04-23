@@ -99,3 +99,11 @@ export {
 
 // ─── conversions ─────────────────────────────
 export { listConversions, searchConversions } from "./conversions";
+
+// ─── mapper（API 响应 → UI 类型转换） ─────────
+export {
+  mapSingleLinkConvertResponse,
+  mapConversionRecordToShortLink,
+  mapBatchHideItemResponse,
+  enrichLinkWithDetail,
+} from "./mapper";

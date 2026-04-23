@@ -13,7 +13,19 @@ import { LoginPage } from './components/LoginPage'
 import { VisitLogModal } from './components/VisitLogModal'
 import { ShortLink, ProxyMode } from './types/index'
 import { createShortLink, generateMockVisits } from './utils/shortlink'
-import { createApiClient, ApiClient } from '@/app/lib/api'
+import { 
+  createApiClient, 
+  ApiClient, 
+  ApiError,
+  convertSingleLink,
+  listConversions,
+  searchConversions,
+  deleteLink,
+  updateLinkOriginalUrl,
+  updateLinkResponseMode,
+  mapSingleLinkConvertResponse,
+  mapConversionRecordToShortLink,
+} from '@/app/lib/api'
 import { Send, ArrowRightLeft, Globe } from 'lucide-react'
 
 type Tab = 'single' | 'batch' | 'file'
@@ -24,8 +36,6 @@ const AUTH_KEY = 'cloak-auth-user'
 
 export function App() {
   const [user, setUser] = useState<string | null>(null)
-  /** 登录密码，与 username 一起持久化，用于构建 apiClient */
-  const [password, setPassword] = useState<string | null>(null)
   /** 已认证的 API 客户端，登录后创建，登出时清除 */
   const [apiClient, setApiClient] = useState<ApiClient | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('single')
@@ -43,8 +53,9 @@ export function App() {
       if (raw) {
         const { username: u, password: p } = JSON.parse(raw) as { username: string; password: string }
         if (u && p) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setUser(u)
-          setPassword(p)
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setApiClient(createApiClient(u, p))
         }
       }
@@ -55,11 +66,15 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    // 仅在未登录（无 apiClient）时加载演示数据，已登录用户的历史由服务端加载
+    if (apiClient) return
+
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
         if (parsed.length > 0) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setLinks(parsed)
           return
         }
@@ -133,15 +148,36 @@ export function App() {
     ]
 
     setLinks(demoLinks)
-  }, [])
+  }, [apiClient])
+
+  // 当登录成功（apiClient 存在）时，从服务端加载历史记录
+  useEffect(() => {
+    if (!apiClient) return
+
+    // 异步加载服务端历史
+    const loadHistoryFromServer = async () => {
+      try {
+        const response = await listConversions(apiClient, { page: 1, size: 100 })
+        const mappedLinks = response.items.map(mapConversionRecordToShortLink)
+        setLinks(mappedLinks)
+      } catch (err) {
+        console.error('Failed to load history from server:', err)
+        // 加载失败时保留当前列表或显示空列表
+        setLinks([])
+      }
+    }
+
+    loadHistoryFromServer()
+  }, [apiClient])
 
   useEffect(() => {
+    // 登录态历史由服务端驱动，避免把“搜索结果子集”持久化到本地缓存。
+    if (apiClient) return
     localStorage.setItem(STORAGE_KEY, JSON.stringify(links))
-  }, [links])
+  }, [apiClient, links])
 
   const handleLogin = (username: string, pw: string) => {
     setUser(username)
-    setPassword(pw)
     setApiClient(createApiClient(username, pw))
     // 将用户名和密码序列化为 JSON 持久化，供下次刷新恢复 session
     localStorage.setItem(AUTH_KEY, JSON.stringify({ username, password: pw }))
@@ -149,29 +185,63 @@ export function App() {
 
   const handleLogout = () => {
     setUser(null)
-    setPassword(null)
     setApiClient(null)
     localStorage.removeItem(AUTH_KEY)
   }
 
-  const handleSingleConvert = (url: string) => {
-    const shortLink = createShortLink(url, 'single', undefined, proxyMode)
-    shortLink.status = 'converting'
-    setLinks((prev) => [shortLink, ...prev])
+  const handleSingleConvert = async (url: string) => {
+    // 若未登录或无 API 客户端，不处理
+    if (!apiClient) {
+      console.error('API client not initialized')
+      return
+    }
 
-    setTimeout(() => {
+    // 生成临时短链对象，用于展示"转换中"状态
+    const tempLink = createShortLink(url, 'single', undefined, proxyMode)
+    tempLink.status = 'converting'
+    const tempId = tempLink.id
+    setLinks((prev) => [tempLink, ...prev])
+
+    try {
+      // 调用真实 API
+      const apiResponse = await convertSingleLink(apiClient, {
+        url,
+        response_mode: proxyMode,
+      })
+
+      // 将 API 响应映射为 UI ShortLink
+      const realLink = mapSingleLinkConvertResponse(
+        apiResponse,
+        crypto.randomUUID(), // 为单链接分配独立的 batchId
+        'single'
+      )
+      realLink.id = tempId // 保持临时 ID 以便更新
+
+      // 更新为真实数据，标记为完成
       setLinks((prev) =>
         prev.map((l) =>
-          l.id === shortLink.id
-            ? {
-                ...l,
-                status: 'done' as const,
-                visits: generateMockVisits(Math.floor(Math.random() * 20) + 1),
-              }
-            : l,
-        ),
+          l.id === tempId
+            ? { ...realLink, status: 'done' as const }
+            : l
+        )
       )
-    }, 800)
+    } catch (err) {
+      // 转换失败时从列表移除临时项
+      setLinks((prev) => prev.filter((l) => l.id !== tempId))
+
+      // 提示错误信息
+      let errorMsg = '转换失败，请重试'
+      if (err instanceof ApiError) {
+        if (err.status === 401 || err.status === 403) {
+          errorMsg = '认证过期，请重新登录'
+        } else {
+          errorMsg = `${err.message} (${err.code})`
+        }
+      }
+      // 使用 window.alert 提示（后续可改为 Toast 组件）
+      window.alert(errorMsg)
+      console.error('Single link conversion failed:', err)
+    }
   }
 
   const handleBatchConvert = (urls: string[]) => {
@@ -228,8 +298,34 @@ export function App() {
     setLinks((prev) => prev.filter((link) => link.batchId !== batchId))
   }
 
-  const handleDelete = (id: string) => {
-    setLinks((prev) => prev.filter((link) => link.id !== id))
+  const handleDelete = async (id: string) => {
+    if (!apiClient) return
+
+    // 查找要删除的链接的 shortCode
+    const linkToDelete = links.find((l) => l.id === id)
+    if (!linkToDelete) {
+      console.error('Link not found for deletion:', id)
+      return
+    }
+
+    try {
+      // 调用后端删除 API
+      await deleteLink(apiClient, linkToDelete.shortCode)
+
+      // 删除成功后，从本地列表中移除
+      setLinks((prev) => prev.filter((link) => link.id !== id))
+    } catch (err) {
+      console.error('Failed to delete link:', err)
+      let errorMsg = '删除失败，请重试'
+      if (err instanceof ApiError) {
+        if (err.status === 404) {
+          errorMsg = '链接不存在'
+        } else {
+          errorMsg = `${err.message} (${err.code})`
+        }
+      }
+      window.alert(errorMsg)
+    }
   }
 
   const handleBulkDelete = (ids: string[]) => {
@@ -241,44 +337,121 @@ export function App() {
     setIsEditModalOpen(true)
   }
 
-  const handleSaveEdit = (id: string, newOriginalUrl: string) => {
-    setLinks((prev) =>
-      prev.map((link) =>
-        link.id === id
-          ? {
-              ...link,
-              originalUrl: newOriginalUrl,
-            }
-          : link,
-      ),
-    )
+  const handleSaveEdit = async (id: string, newOriginalUrl: string) => {
+    if (!apiClient) return
+
+    // 查找要编辑的链接
+    const linkToEdit = links.find((l) => l.id === id)
+    if (!linkToEdit) {
+      console.error('Link not found for edit:', id)
+      return
+    }
+
+    try {
+      // 调用后端更新原始 URL API
+      await updateLinkOriginalUrl(apiClient, linkToEdit.shortCode, {
+        original_url: newOriginalUrl,
+      })
+
+      // 更新本地列表
+      setLinks((prev) =>
+        prev.map((link) =>
+          link.id === id
+            ? {
+                ...link,
+                originalUrl: newOriginalUrl,
+              }
+            : link,
+        ),
+      )
+    } catch (err) {
+      console.error('Failed to update link:', err)
+      let errorMsg = '更新失败，请重试'
+      if (err instanceof ApiError) {
+        errorMsg = `${err.message} (${err.code})`
+      }
+      window.alert(errorMsg)
+    }
   }
 
-  const handleToggleProxyMode = (ids: string[], newMode: ProxyMode) => {
-    setLinks((prev) =>
-      prev.map((link) =>
-        ids.includes(link.id)
-          ? {
-              ...link,
-              proxyMode: newMode,
-            }
-          : link,
-      ),
-    )
+  const handleToggleProxyMode = async (ids: string[], newMode: ProxyMode) => {
+    if (!apiClient) return
+
+    try {
+      // 对所有选中的链接调用更新 API
+      const updatePromises = ids.map((id) => {
+        const linkToUpdate = links.find((l) => l.id === id)
+        if (!linkToUpdate) return null
+        return updateLinkResponseMode(apiClient, linkToUpdate.shortCode, {
+          response_mode: newMode,
+        })
+      })
+
+      // 等待所有更新完成
+      await Promise.all(updatePromises.filter(Boolean))
+
+      // 更新本地列表
+      setLinks((prev) =>
+        prev.map((link) =>
+          ids.includes(link.id)
+            ? {
+                ...link,
+                proxyMode: newMode,
+              }
+            : link,
+        ),
+      )
+    } catch (err) {
+      console.error('Failed to toggle proxy mode:', err)
+      let errorMsg = '模式切换失败，请重试'
+      if (err instanceof ApiError) {
+        errorMsg = `${err.message} (${err.code})`
+      }
+      window.alert(errorMsg)
+    }
   }
 
   const handleViewLogs = (link: ShortLink) => {
     setVisitLogLink(link)
   }
 
-  const handleRefresh = () => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        setLinks(JSON.parse(stored))
-      } catch (e) {
-        console.error('Failed to parse stored links', e)
+  const handleRefresh = async () => {
+    // 从服务端重新加载历史记录
+    if (!apiClient) return
+
+    try {
+      const response = await listConversions(apiClient, { page: 1, size: 100 })
+      const mappedLinks = response.items.map(mapConversionRecordToShortLink)
+      setLinks(mappedLinks)
+    } catch (err) {
+      console.error('Failed to refresh history from server:', err)
+      window.alert('刷新失败，请稍后重试')
+    }
+  }
+
+  // 搜索历史记录（调用服务端 API）
+  const handleSearch = async (keyword: string) => {
+    if (!apiClient) return
+
+    try {
+      if (!keyword || keyword.trim().length === 0) {
+        // 关键词为空时，重新加载全部记录
+        const response = await listConversions(apiClient, { page: 1, size: 100 })
+        const mappedLinks = response.items.map(mapConversionRecordToShortLink)
+        setLinks(mappedLinks)
+      } else {
+        // 调用搜索 API
+        const response = await searchConversions(apiClient, {
+          keyword: keyword.trim(),
+          page: 1,
+          size: 100,
+        })
+        const mappedLinks = response.items.map(mapConversionRecordToShortLink)
+        setLinks(mappedLinks)
       }
+    } catch (err) {
+      console.error('Failed to search links:', err)
+      window.alert('搜索失败，请重试')
     }
   }
 
@@ -342,6 +515,7 @@ export function App() {
             onViewLogs={handleViewLogs}
             onRefresh={handleRefresh}
             onToggleProxyMode={handleToggleProxyMode}
+            onSearch={handleSearch}
           />
         </div>
       </main>

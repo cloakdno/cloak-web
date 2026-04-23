@@ -1,4 +1,4 @@
-import { ConversionGroup, ConversionTab, ProxyMode, ShortLink, VisitLog } from "./types";
+import { ConversionGroup, ConversionTab, ProxyMode, ShortLink, VisitLog } from "./types/index";
 
 const DOMAIN = "clk.sh";
 
@@ -16,10 +16,20 @@ function generateShortCode(): string {
 }
 
 function generateVisits(count: number): VisitLog[] {
+  const countries = ['United States', 'China', 'Japan', 'Germany', 'France', 'India', 'Russia', 'Brazil']
+  const devices = ['Mobile', 'Desktop', 'Tablet']
+  const browsers = ['Chrome', 'Firefox', 'Safari', 'Edge', 'Opera']
+  const referrers = ['google.com', 'twitter.com', 'facebook.com', 'github.com', '']
+
   return Array.from({ length: count }, () => ({
     id: crypto.randomUUID(),
     timestamp: Date.now() - randomInt(1000 * 60 * 60 * 24 * 7),
-  }));
+    ip: `${randomInt(256)}.${randomInt(256)}.${randomInt(256)}.${randomInt(256)}`,
+    country: countries[randomInt(countries.length)],
+    device: devices[randomInt(devices.length)],
+    browser: browsers[randomInt(browsers.length)],
+    referrer: referrers[randomInt(referrers.length)],
+  }))
 }
 
 export function createMockLink(

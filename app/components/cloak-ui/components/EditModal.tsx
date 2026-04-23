@@ -16,7 +16,9 @@ export function EditModal({ link, isOpen, onClose, onSave }: EditModalProps) {
 
   useEffect(() => {
     if (link) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOriginalUrl(link.originalUrl)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError('')
     }
   }, [link])

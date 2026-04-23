@@ -1,5 +1,8 @@
 export type ConversionSource = 'single' | 'batch' | 'file'
 
+// 用于 TabSwitcher 组件的标签页类型别名
+export type ConversionTab = ConversionSource
+
 export interface VisitLog {
   id: string
   timestamp: number
