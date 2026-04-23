@@ -26,6 +26,7 @@ import { ShortLink, ConversionGroup, ProxyMode } from '../types'
 import { formatDate, groupLinksByBatch } from '../utils/shortlink'
 import { BatchViewModal } from './BatchViewModal'
 import { BatchTextDetailResponse } from '@/app/lib/api'
+import toast from 'react-hot-toast'
 
 interface HistoryTableProps {
   links: ShortLink[]
@@ -780,7 +781,7 @@ export function HistoryTable({
         onDownload={() => {
           const taskId = viewingBatchGroup ? getGroupTaskId(viewingBatchGroup) : undefined
           if (typeof taskId !== 'number') {
-            window.alert('未找到批量任务下载地址')
+            toast.error('未找到批量任务下载地址')
             return
           }
           if (onOpenBatchDownload) {

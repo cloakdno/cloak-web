@@ -24,7 +24,7 @@ export function ChangePasswordModal({
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const isPasswordLengthValid = newPassword.length >= 6 && newPassword.length <= 18
+  const isPasswordLengthValid = newPassword.length >= 8 && newPassword.length <= 72
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,7 +38,7 @@ export function ChangePasswordModal({
       return
     }
     if (!isPasswordLengthValid) {
-      setError('新密码长度需为 6-18 位')
+      setError('新密码长度需为 8-72 位')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -164,7 +164,7 @@ export function ChangePasswordModal({
                       <CheckCircle2 size={10} />
                     </div>
                     <span className={`text-xs ${isPasswordLengthValid ? 'text-green-600' : 'text-gray-400'}`}>
-                      长度需为 6-18 位
+                      长度需为 8-72 位
                     </span>
                   </div>
                 )}

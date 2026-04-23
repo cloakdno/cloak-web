@@ -42,6 +42,7 @@ import {
   mapConversionRecordToShortLink,
 } from '@/app/lib/api'
 import { Send, ArrowRightLeft, Globe } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 type Tab = 'single' | 'batch' | 'file'
 
@@ -64,7 +65,6 @@ export function App() {
   const [passwordError, setPasswordError] = useState('')
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('single')
   const [proxyMode, setProxyMode] = useState<ProxyMode>('redirect')
   const [links, setLinks] = useState<ShortLink[]>([])
@@ -258,16 +258,6 @@ export function App() {
     void loadExpiry()
   }, [apiClient])
 
-  useEffect(() => {
-    if (!successMessage) return
-
-    const timer = window.setTimeout(() => {
-      setSuccessMessage('')
-    }, 2500)
-
-    return () => window.clearTimeout(timer)
-  }, [successMessage])
-
   // 当登录成功（apiClient 存在）时，从服务端加载历史记录
   useEffect(() => {
     if (!apiClient) return
@@ -331,7 +321,7 @@ export function App() {
         AUTH_KEY,
         JSON.stringify({ username: nextUsername, password: authPassword }),
       )
-      setSuccessMessage('用户名修改成功')
+      toast.success('用户名修改成功')
     } catch (err) {
       console.error('Failed to update username:', err)
       const message =
@@ -366,7 +356,7 @@ export function App() {
         AUTH_KEY,
         JSON.stringify({ username: user, password: payload.newPassword }),
       )
-      setSuccessMessage('密码修改成功')
+      toast.success('密码修改成功')
     } catch (err) {
       console.error('Failed to update password:', err)
       const message =
@@ -427,8 +417,7 @@ export function App() {
           errorMsg = `${err.message} (${err.code})`
         }
       }
-      // 使用 window.alert 提示（后续可改为 Toast 组件）
-      window.alert(errorMsg)
+      toast.error(errorMsg)
       console.error('Single link conversion failed:', err)
     }
   }
@@ -466,7 +455,7 @@ export function App() {
         startBatchPolling(apiClient)
       }
 
-      window.alert(
+      toast.success(
         `批量任务已提交：识别 ${apiResponse.recognized_link_count} 条链接，生成 ${apiResponse.conversion_record_count} 条记录。`,
       )
     } catch (err) {
@@ -481,7 +470,7 @@ export function App() {
           errorMsg = `${err.message} (${err.code})`
         }
       }
-      window.alert(errorMsg)
+      toast.error(errorMsg)
       console.error('Batch convert failed:', err)
     }
   }
@@ -512,7 +501,7 @@ export function App() {
         startBatchPolling(apiClient)
       }
 
-      window.alert(`文件任务已提交：本地预检识别 ${urls.length} 条链接，最终结果以后端任务为准。`)
+      toast.success(`文件任务已提交：本地预检识别 ${urls.length} 条链接，最终结果以后端任务为准。`)
     } catch (err) {
       setLinks((prev) => prev.filter((link) => link.batchId !== batchId))
 
@@ -524,7 +513,7 @@ export function App() {
           errorMsg = `${err.message} (${err.code})`
         }
       }
-      window.alert(errorMsg)
+      toast.error(errorMsg)
       console.error('Document file convert failed:', err)
     }
   }
@@ -554,7 +543,7 @@ export function App() {
       if (err instanceof ApiError) {
         errorMsg = `${err.message} (${err.code})`
       }
-      window.alert(errorMsg)
+      toast.error(errorMsg)
     }
   }
 
@@ -584,7 +573,7 @@ export function App() {
           errorMsg = `${err.message} (${err.code})`
         }
       }
-      window.alert(errorMsg)
+      toast.error(errorMsg)
     }
   }
 
@@ -630,7 +619,7 @@ export function App() {
       if (err instanceof ApiError) {
         errorMsg = `${err.message} (${err.code})`
       }
-      window.alert(errorMsg)
+      toast.error(errorMsg)
     }
   }
 
@@ -691,7 +680,7 @@ export function App() {
       if (err instanceof ApiError) {
         errorMsg = `${err.message} (${err.code})`
       }
-      window.alert(errorMsg)
+      toast.error(errorMsg)
     }
   }
 
@@ -714,7 +703,7 @@ export function App() {
 
     const taskLink = group.links.find((link) => typeof link.taskId === 'number')
     if (!taskLink || typeof taskLink.taskId !== 'number') {
-      window.alert('未找到可下载的文件任务')
+      toast.error('未找到可下载的文件任务')
       return
     }
 
@@ -735,7 +724,7 @@ export function App() {
       if (err instanceof ApiError) {
         errorMsg = `${err.message} (${err.code})`
       }
-      window.alert(errorMsg)
+      toast.error(errorMsg)
     }
   }
 
@@ -775,7 +764,7 @@ export function App() {
       setLinks(mappedLinks)
     } catch (err) {
       console.error('Failed to refresh history from server:', err)
-      window.alert('刷新失败，请稍后重试')
+      toast.error('刷新失败，请稍后重试')
     }
   }
 
@@ -801,7 +790,7 @@ export function App() {
       }
     } catch (err) {
       console.error('Failed to search links:', err)
-      window.alert('搜索失败，请重试')
+      toast.error('搜索失败，请重试')
     }
   }
 
@@ -825,12 +814,6 @@ export function App() {
         isUpdatingPassword={isUpdatingPassword}
         onLogout={handleLogout}
       />
-
-      {successMessage && (
-        <div className="fixed top-4 right-4 z-50 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          {successMessage}
-        </div>
-      )}
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6 sm:pb-16">
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-8 lg:p-10 mb-8">
