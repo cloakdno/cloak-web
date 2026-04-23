@@ -86,9 +86,9 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
 ### 3.7 conversions
 
 - GET /api/conversions（鉴权：是）
-  - 功能：分页查询转换记录
+  - 功能：分页查询转换记录（返回 single_link / batch_text / document_file 三类详情）
 - GET /api/conversions/search（鉴权：是）
-  - 功能：按关键词分页搜索转换记录
+  - 功能：按关键词分页搜索转换记录（返回结构与 /api/conversions 一致）
 
 ## 4. 请求与响应示例
 
@@ -177,6 +177,98 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
 ```json
 {
   "message": "密码修改成功"
+}
+```
+
+### 4.5 转换记录分页（三态详情）
+
+请求：GET /api/conversions?page=1&size=20
+
+成功响应（示例）：
+
+```json
+{
+  "items": [
+    {
+      "conversion_record_id": 101,
+      "link_id": 201,
+      "code": "single01",
+      "short_url": "http://localhost:9000/single01",
+      "original_url": "https://single.example.com",
+      "response_mode": "redirect",
+      "conversion_type": "single_link",
+      "single_link": {
+        "id": 201,
+        "code": "single01",
+        "original_url": "https://single.example.com",
+        "response_mode": "redirect",
+        "visit_count": 0,
+        "created_at": "2026-04-24T14:30:00Z",
+        "updated_at": "2026-04-24T14:30:00Z"
+      },
+      "created_at": "2026-04-24 14:30:00"
+    },
+    {
+      "conversion_record_id": 102,
+      "link_id": 202,
+      "code": "batch001",
+      "short_url": "http://localhost:9000/batch001",
+      "original_url": "https://batch.example.com",
+      "response_mode": "redirect",
+      "conversion_type": "batch_text",
+      "batch_text": {
+        "id": 12,
+        "source_text": "visit https://batch.example.com",
+        "converted_text": "visit http://localhost:9000/batch001",
+        "recognized_link_count": 1,
+        "status": "success",
+        "total_visit_count": 0,
+        "response_mode": "redirect",
+        "created_at": "2026-04-24T14:10:00Z",
+        "updated_at": "2026-04-24T14:31:00Z",
+        "download_url": "http://localhost:9000/api/batch-text/12/download"
+      },
+      "created_at": "2026-04-24 14:31:00"
+    },
+    {
+      "conversion_record_id": 103,
+      "link_id": 203,
+      "code": "doc00001",
+      "short_url": "http://localhost:9000/doc00001",
+      "original_url": "https://doc.example.com",
+      "response_mode": "redirect",
+      "conversion_type": "document_file",
+      "document_file": {
+        "id": 20,
+        "file_id": 30,
+        "converted_file_id": 31,
+        "recognized_link_count": 1,
+        "status": "success",
+        "total_visit_count": 0,
+        "response_mode": "redirect",
+        "created_at": "2026-04-24T14:20:00Z",
+        "updated_at": "2026-04-24T14:32:00Z",
+        "download_url": "http://localhost:9000/api/document-file/20/download",
+        "uploaded_file": {
+          "id": 30,
+          "file_name": "source.txt",
+          "save_directory": "storage/uploads/source_xxx.txt",
+          "file_type": "text/plain",
+          "file_size": 128,
+          "created_at": "2026-04-24T14:20:00Z",
+          "updated_at": "2026-04-24T14:20:00Z"
+        }
+      },
+      "created_at": "2026-04-24 14:32:00"
+    }
+  ],
+  "page": 1,
+  "size": 20,
+  "next_page": 0,
+  "prev_page": 0,
+  "has_next": false,
+  "has_prev": false,
+  "total": 3
 }
 ```
 

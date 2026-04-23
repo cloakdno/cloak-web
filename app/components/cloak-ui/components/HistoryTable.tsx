@@ -117,6 +117,58 @@ export function HistoryTable({
     return total
   }
 
+  const getSourceMeta = (source: ShortLink['source']) => {
+    if (source === 'file') {
+      return {
+        label: '文件任务',
+        icon: <FileText size={12} className="text-blue-500" />,
+        className: 'bg-blue-50 text-blue-600',
+      }
+    }
+    if (source === 'batch') {
+      return {
+        label: '批量任务',
+        icon: <Layers size={12} className="text-orange-500" />,
+        className: 'bg-orange-50 text-orange-600',
+      }
+    }
+    return {
+      label: '单链任务',
+      icon: <ExternalLink size={12} className="text-purple-500" />,
+      className: 'bg-purple-50 text-purple-600',
+    }
+  }
+
+  const renderSourceBadge = (source: ShortLink['source']) => {
+    const meta = getSourceMeta(source)
+    return (
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${meta.className}`}
+      >
+        {meta.icon}
+        {meta.label}
+      </span>
+    )
+  }
+
+  const renderTaskStatusBadge = (converting: boolean) => {
+    if (converting) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 text-purple-500">
+          <Loader2 size={10} className="animate-spin" />
+          处理中
+        </span>
+      )
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-600">
+        <CheckCircle2 size={10} />
+        已完成
+      </span>
+    )
+  }
+
   const renderProxyBadge = (mode: ProxyMode | undefined, ids: string[]) => {
     const currentMode = mode || 'redirect'
     const isRedirect = currentMode === 'redirect'
@@ -159,6 +211,7 @@ export function HistoryTable({
 
   const renderSingleRow = (link: ShortLink, idx: number) => {
     const converting = isLinkConverting(link)
+    const actionDisabled = converting
     const isMenuOpen = openMenuId === link.id
 
     return (
@@ -167,11 +220,13 @@ export function HistoryTable({
         className={`group border-b border-gray-50 hover:bg-gray-50/50 transition-colors ${converting ? 'bg-purple-50/30' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}`}
       >
         <td className="p-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {converting ? (
               <>
                 <Loader2 size={14} className="animate-spin text-purple-500" />
                 <span className="text-sm text-purple-500 font-medium">转换中...</span>
+                {renderSourceBadge(link.source)}
+                {renderTaskStatusBadge(true)}
               </>
             ) : (
               <>
@@ -184,9 +239,8 @@ export function HistoryTable({
                   {link.shortCode}
                   <ExternalLink size={12} className="transition-opacity" />
                 </a>
-                <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-500 rounded-full font-medium">
-                  单链
-                </span>
+                {renderSourceBadge(link.source)}
+                {renderTaskStatusBadge(false)}
               </>
             )}
           </div>
@@ -220,124 +274,125 @@ export function HistoryTable({
           )}
         </td>
         <td className="p-4 text-right relative">
-          {converting ? (
-            <span className="text-xs text-purple-400 font-medium">等待完成</span>
-          ) : (
-            <>
-              <div className="hidden sm:flex items-center justify-end gap-1">
-                <button
-                  onClick={() => handleCopy(link.shortUrl, link.id)}
-                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                  title="复制"
-                >
-                  {copiedId === link.id ? (
-                    <CheckCircle2 size={16} className="text-green-500" />
-                  ) : (
-                    <Copy size={16} />
-                  )}
-                </button>
-                <button
-                  onClick={() => onEdit(link)}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  title="编辑"
-                >
-                  <Edit2 size={16} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (window.confirm('确定删除此链接？')) onDelete(link.id)
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                  title="删除"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-
-              <div className="sm:hidden flex justify-end">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setOpenMenuId(isMenuOpen ? null : link.id)
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  <MoreVertical size={18} />
-                </button>
-                {isMenuOpen && (
-                  <div
-                    ref={menuRef}
-                    className="absolute right-4 top-12 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10"
-                  >
-                    <button
-                      onClick={() => {
-                        handleCopy(link.shortUrl, link.id)
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      {copiedId === link.id ? (
-                        <CheckCircle2 size={14} className="text-green-500" />
-                      ) : (
-                        <Copy size={14} className="text-gray-400" />
-                      )}
-                      复制短链
-                    </button>
-                    <button
-                      onClick={() => {
-                        onEdit(link)
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Edit2 size={14} className="text-gray-400" />
-                      编辑
-                    </button>
-                    <button
-                      onClick={() => {
-                        setViewingDetails(link)
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Info size={14} className="text-gray-400" />
-                      查看详情
-                    </button>
-                    <button
-                      onClick={() => {
-                        setProxyConfirm({
-                          ids: [link.id],
-                          currentMode: link.proxyMode || 'redirect',
-                          newMode: link.proxyMode === 'redirect' ? 'proxy' : 'redirect',
-                          count: 1,
-                        })
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      {link.proxyMode === 'redirect' ? (
-                        <Globe size={14} className="text-gray-400" />
-                      ) : (
-                        <ArrowRightLeft size={14} className="text-gray-400" />
-                      )}
-                      切换模式
-                    </button>
-                    <div className="h-px bg-gray-100 my-1 mx-2" />
-                    <button
-                      onClick={() => {
-                        if (window.confirm('确定删除此链接？')) onDelete(link.id)
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <Trash2 size={14} />
-                      删除
-                    </button>
-                  </div>
+          <>
+            <div className="hidden sm:flex items-center justify-end gap-1">
+              <button
+                onClick={() => handleCopy(link.shortUrl, link.id)}
+                disabled={actionDisabled}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                title="复制"
+              >
+                {copiedId === link.id ? (
+                  <CheckCircle2 size={16} className="text-green-500" />
+                ) : (
+                  <Copy size={16} />
                 )}
-              </div>
-            </>
-          )}
+              </button>
+              <button
+                onClick={() => onEdit(link)}
+                disabled={actionDisabled}
+                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                title="编辑"
+              >
+                <Edit2 size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('确定删除此链接？')) onDelete(link.id)
+                }}
+                disabled={actionDisabled}
+                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                title="删除"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+
+            <div className="sm:hidden flex justify-end">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (actionDisabled) return
+                  setOpenMenuId(isMenuOpen ? null : link.id)
+                }}
+                disabled={actionDisabled}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+              >
+                <MoreVertical size={18} />
+              </button>
+              {isMenuOpen && (
+                <div
+                  ref={menuRef}
+                  className="absolute right-4 top-12 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10"
+                >
+                  <button
+                    onClick={() => {
+                      handleCopy(link.shortUrl, link.id)
+                      setOpenMenuId(null)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    {copiedId === link.id ? (
+                      <CheckCircle2 size={14} className="text-green-500" />
+                    ) : (
+                      <Copy size={14} className="text-gray-400" />
+                    )}
+                    复制短链
+                  </button>
+                  <button
+                    onClick={() => {
+                      onEdit(link)
+                      setOpenMenuId(null)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Edit2 size={14} className="text-gray-400" />
+                    编辑
+                  </button>
+                  <button
+                    onClick={() => {
+                      setViewingDetails(link)
+                      setOpenMenuId(null)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Info size={14} className="text-gray-400" />
+                    查看详情
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProxyConfirm({
+                        ids: [link.id],
+                        currentMode: link.proxyMode || 'redirect',
+                        newMode: link.proxyMode === 'redirect' ? 'proxy' : 'redirect',
+                        count: 1,
+                      })
+                      setOpenMenuId(null)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    {link.proxyMode === 'redirect' ? (
+                      <Globe size={14} className="text-gray-400" />
+                    ) : (
+                      <ArrowRightLeft size={14} className="text-gray-400" />
+                    )}
+                    切换模式
+                  </button>
+                  <div className="h-px bg-gray-100 my-1 mx-2" />
+                  <button
+                    onClick={() => {
+                      if (window.confirm('确定删除此链接？')) onDelete(link.id)
+                      setOpenMenuId(null)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                  >
+                    <Trash2 size={14} />
+                    删除
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         </td>
       </tr>
     )
@@ -346,6 +401,7 @@ export function HistoryTable({
   const renderGroupRow = (group: ConversionGroup, idx: number) => {
     const isFile = group.source === 'file'
     const converting = isGroupConverting(group)
+    const actionDisabled = converting
     const groupIds = group.links.map((l) => l.id)
     const groupMode = group.links[0]?.proxyMode
     const isMenuOpen = openMenuId === group.batchId
@@ -356,13 +412,15 @@ export function HistoryTable({
         className={`group border-b border-gray-50 hover:bg-gray-50/50 transition-colors ${converting ? 'bg-purple-50/30' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}`}
       >
         <td className="p-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {converting ? (
               <>
                 <Loader2 size={16} className="animate-spin text-purple-500" />
                 <span className="text-sm text-purple-500 font-medium">
                   {isFile ? '文件转换中...' : '批量转换中...'}
                 </span>
+                {renderSourceBadge(group.source)}
+                {renderTaskStatusBadge(true)}
                 <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-400 rounded-full font-medium">
                   {group.links.length} 条
                 </span>
@@ -382,6 +440,8 @@ export function HistoryTable({
                 >
                   {group.links.length} 条
                 </span>
+                {renderSourceBadge(group.source)}
+                {renderTaskStatusBadge(false)}
               </>
             )}
           </div>
@@ -415,126 +475,127 @@ export function HistoryTable({
           )}
         </td>
         <td className="p-4 text-right relative">
-          {converting ? (
-            <span className="text-xs text-purple-400 font-medium">等待完成</span>
-          ) : (
-            <>
-              <div className="hidden sm:flex items-center justify-end gap-1">
-                {isFile ? (
-                  <button
-                    onClick={() => {
-                      if (window.confirm('确定要下载转换结果文件吗？')) handleDownloadGroup(group)
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
-                    title="下载转换结果"
-                  >
-                    <Download size={14} />
-                    下载
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setViewingBatchGroup(group)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-100 transition-colors"
-                    title="查看转换结果"
-                  >
-                    <Eye size={14} />
-                    查看
-                  </button>
-                )}
+          <>
+            <div className="hidden sm:flex items-center justify-end gap-1">
+              {isFile ? (
                 <button
                   onClick={() => {
-                    if (window.confirm(`确定删除这 ${group.links.length} 条链接？`)) onDeleteGroup(group.batchId)
+                    if (window.confirm('确定要下载转换结果文件吗？')) handleDownloadGroup(group)
                   }}
-                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                  title="删除全部"
+                  disabled={actionDisabled}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-50"
+                  title="下载转换结果"
                 >
-                  <Trash2 size={16} />
+                  <Download size={14} />
+                  下载
                 </button>
-              </div>
-
-              <div className="sm:hidden flex justify-end">
+              ) : (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setOpenMenuId(isMenuOpen ? null : group.batchId)
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                  onClick={() => setViewingBatchGroup(group)}
+                  disabled={actionDisabled}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-orange-50"
+                  title="查看转换结果"
                 >
-                  <MoreVertical size={18} />
+                  <Eye size={14} />
+                  查看
                 </button>
-                {isMenuOpen && (
-                  <div
-                    ref={menuRef}
-                    className="absolute right-4 top-12 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10"
+              )}
+              <button
+                onClick={() => {
+                  if (window.confirm(`确定删除这 ${group.links.length} 条链接？`)) onDeleteGroup(group.batchId)
+                }}
+                disabled={actionDisabled}
+                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                title="删除全部"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+
+            <div className="sm:hidden flex justify-end">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (actionDisabled) return
+                  setOpenMenuId(isMenuOpen ? null : group.batchId)
+                }}
+                disabled={actionDisabled}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+              >
+                <MoreVertical size={18} />
+              </button>
+              {isMenuOpen && (
+                <div
+                  ref={menuRef}
+                  className="absolute right-4 top-12 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10"
+                >
+                  {isFile ? (
+                    <button
+                      onClick={() => {
+                        if (window.confirm('确定要下载转换结果文件吗？')) handleDownloadGroup(group)
+                        setOpenMenuId(null)
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Download size={14} className="text-gray-400" />
+                      下载结果
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setViewingBatchGroup(group)
+                        setOpenMenuId(null)
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Eye size={14} className="text-gray-400" />
+                      查看结果
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setViewingDetails(group)
+                      setOpenMenuId(null)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                   >
-                    {isFile ? (
-                      <button
-                        onClick={() => {
-                          if (window.confirm('确定要下载转换结果文件吗？')) handleDownloadGroup(group)
-                          setOpenMenuId(null)
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                      >
-                        <Download size={14} className="text-gray-400" />
-                        下载结果
-                      </button>
+                    <Info size={14} className="text-gray-400" />
+                    查看详情
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProxyConfirm({
+                        ids: groupIds,
+                        currentMode: groupMode || 'redirect',
+                        newMode: groupMode === 'redirect' ? 'proxy' : 'redirect',
+                        count: groupIds.length,
+                      })
+                      setOpenMenuId(null)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    {groupMode === 'redirect' ? (
+                      <Globe size={14} className="text-gray-400" />
                     ) : (
-                      <button
-                        onClick={() => {
-                          setViewingBatchGroup(group)
-                          setOpenMenuId(null)
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                      >
-                        <Eye size={14} className="text-gray-400" />
-                        查看结果
-                      </button>
+                      <ArrowRightLeft size={14} className="text-gray-400" />
                     )}
-                    <button
-                      onClick={() => {
-                        setViewingDetails(group)
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Info size={14} className="text-gray-400" />
-                      查看详情
-                    </button>
-                    <button
-                      onClick={() => {
-                        setProxyConfirm({
-                          ids: groupIds,
-                          currentMode: groupMode || 'redirect',
-                          newMode: groupMode === 'redirect' ? 'proxy' : 'redirect',
-                          count: groupIds.length,
-                        })
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      {groupMode === 'redirect' ? (
-                        <Globe size={14} className="text-gray-400" />
-                      ) : (
-                        <ArrowRightLeft size={14} className="text-gray-400" />
-                      )}
-                      切换模式
-                    </button>
-                    <div className="h-px bg-gray-100 my-1 mx-2" />
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`确定删除这 ${group.links.length} 条链接？`)) onDeleteGroup(group.batchId)
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <Trash2 size={14} />
-                      删除全部
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+                    切换模式
+                  </button>
+                  <div className="h-px bg-gray-100 my-1 mx-2" />
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`确定删除这 ${group.links.length} 条链接？`)) onDeleteGroup(group.batchId)
+                      setOpenMenuId(null)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                  >
+                    <Trash2 size={14} />
+                    删除全部
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         </td>
       </tr>
     )
@@ -762,6 +823,20 @@ export function HistoryTable({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        转换来源
+                      </span>
+                      <div className="mt-1">{renderSourceBadge(viewingDetails.source)}</div>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        任务状态
+                      </span>
+                      <div className="mt-1">{renderTaskStatusBadge(viewingDetails.status === 'converting')}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                         创建时间
                       </span>
                       <p className="mt-1 text-sm text-gray-800">
@@ -815,6 +890,18 @@ export function HistoryTable({
                       </span>
                       <p className="mt-1 text-sm text-gray-800">{viewingDetails.links.length} 条</p>
                     </div>
+                    <div>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        任务状态
+                      </span>
+                      <div className="mt-1">
+                        {renderTaskStatusBadge(
+                          viewingDetails.links.some((link) => link.status === 'converting'),
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                         总访问量

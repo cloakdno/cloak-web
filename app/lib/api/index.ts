@@ -23,6 +23,8 @@ export type { ApiClientOptions } from "./client";
 export type {
   // 通用
   ResponseMode,
+  ConversionStatus,
+  ConversionType,
   ErrorResponse,
   MessageResponse,
   // system
@@ -49,10 +51,14 @@ export type {
   BatchTextSubmitResponse,
   BatchTextDetailResponse,
   BatchTextUpdateResponseModeRequest,
+  BatchTextConversionDetailResponse,
   // document-file
   DocumentFileSubmitResponse,
   DocumentFileUpdateResponseModeRequest,
   DocumentFileUpdateResponseModeResponse,
+  DocumentFileConversionDetailResponse,
+  StoredFile,
+  SingleLinkConversionDetailResponse,
   // conversions
   ConversionPageParams,
   ConversionSearchParams,

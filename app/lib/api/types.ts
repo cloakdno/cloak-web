@@ -12,6 +12,12 @@
 /** 短链响应模式：redirect（302 重定向）或 proxy（服务端代理） */
 export type ResponseMode = "redirect" | "proxy";
 
+/** 转换任务状态（对应 model.ConversionStatus） */
+export type ConversionStatus = "success" | "failed" | "processing";
+
+/** 转换记录类型（对应 response.ConversionRecordItemResponse.conversion_type） */
+export type ConversionType = "single_link" | "batch_text" | "document_file";
+
 // ─────────────────────────────────────────────
 // 通用响应
 // ─────────────────────────────────────────────
@@ -183,6 +189,8 @@ export interface BatchTextSubmitResponse {
   conversion_id: number;
   status: string;
   message: string;
+  recognized_link_count: number;
+  conversion_record_count: number;
 }
 
 /** GET /api/batch-text/{id} 响应（对应 response.BatchTextDetailResponse） */
@@ -192,8 +200,8 @@ export interface BatchTextDetailResponse {
   converted_text: string;
   recognized_link_count: number;
   total_visit_count: number;
-  response_mode: string;
-  status: string;
+  response_mode: ResponseMode;
+  status: ConversionStatus;
   created_at: string;
   updated_at: string;
 }
@@ -226,8 +234,63 @@ export interface DocumentFileUpdateResponseModeRequest {
 /** PUT /api/document-file/{id}/response-mode 响应（对应 response.DocumentFileUpdateResponseModeResponse） */
 export interface DocumentFileUpdateResponseModeResponse {
   conversion_id: number;
-  response_mode: string;
+  response_mode: ResponseMode;
   message: string;
+}
+
+/** 文件元数据（对应 model.StoredFile） */
+export interface StoredFile {
+  id: number;
+  file_name: string;
+  save_directory: string;
+  file_type: string;
+  file_size: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 单链转换详情（对应 response.SingleLinkConversionDetailResponse） */
+export interface SingleLinkConversionDetailResponse {
+  id: number;
+  code: string;
+  original_url: string;
+  response_mode: ResponseMode;
+  visit_count: number;
+  batch_text_conversion_id: number | null;
+  document_file_conversion_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 批量文本转换详情（对应 response.BatchTextConversionDetailResponse） */
+export interface BatchTextConversionDetailResponse {
+  id: number;
+  source_text: string;
+  converted_text: string;
+  recognized_link_count: number;
+  total_visit_count: number;
+  response_mode: ResponseMode;
+  status: ConversionStatus;
+  download_url: string;
+  last_total_visit_count_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 文档文件转换详情（对应 response.DocumentFileConversionDetailResponse） */
+export interface DocumentFileConversionDetailResponse {
+  id: number;
+  file_id: number;
+  converted_file_id: number;
+  recognized_link_count: number;
+  total_visit_count: number;
+  response_mode: ResponseMode;
+  status: ConversionStatus;
+  download_url: string;
+  last_total_visit_count_at: string;
+  uploaded_file: StoredFile;
+  created_at: string;
+  updated_at: string;
 }
 
 // ─────────────────────────────────────────────
@@ -252,7 +315,11 @@ export interface ConversionRecordItemResponse {
   code: string;
   short_url: string;
   original_url: string;
-  response_mode: string;
+  response_mode: ResponseMode;
+  conversion_type: ConversionType;
+  single_link?: SingleLinkConversionDetailResponse;
+  batch_text?: BatchTextConversionDetailResponse;
+  document_file?: DocumentFileConversionDetailResponse;
   created_at: string;
 }
 

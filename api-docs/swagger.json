@@ -1296,6 +1296,63 @@
                 "ResponseModeProxy"
             ]
         },
+        "model.ConversionStatus": {
+            "type": "string",
+            "enum": [
+                "success",
+                "failed",
+                "processing"
+            ],
+            "x-enum-varnames": [
+                "ConversionStatusSuccess",
+                "ConversionStatusFailed",
+                "ConversionStatusProcessing"
+            ]
+        },
+        "model.ResponseMode": {
+            "type": "string",
+            "enum": [
+                "redirect",
+                "proxy"
+            ],
+            "x-enum-varnames": [
+                "ResponseModeRedirect",
+                "ResponseModeProxy"
+            ]
+        },
+        "model.StoredFile": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "CreatedAt 为创建时间。",
+                    "type": "string"
+                },
+                "file_name": {
+                    "description": "FileName 为原始文件名。",
+                    "type": "string"
+                },
+                "file_size": {
+                    "description": "FileSize 为文件大小（字节）。",
+                    "type": "integer"
+                },
+                "file_type": {
+                    "description": "FileType 为文件 MIME 类型。",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID 为主键 ID。",
+                    "type": "integer"
+                },
+                "save_directory": {
+                    "description": "SaveDirectory 为文件保存目录。",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "UpdatedAt 为更新时间。",
+                    "type": "string"
+                }
+            }
+        },
         "request.BatchHideRequest": {
             "type": "object",
             "properties": {
@@ -1312,11 +1369,11 @@
         },
         "request.BatchTextConvertRequest": {
             "type": "object",
-            "required": [
-                "source_text"
-            ],
             "properties": {
                 "response_mode": {
+                    "type": "string"
+                },
+                "sourceText": {
                     "type": "string"
                 },
                 "source_text": {
@@ -1442,6 +1499,62 @@
                 }
             }
         },
+        "response.BatchTextConversionDetailResponse": {
+            "type": "object",
+            "properties": {
+                "converted_text": {
+                    "description": "ConvertedText 为转换后的文本内容。",
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "CreatedAt 为创建时间。",
+                    "type": "string"
+                },
+                "download_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID 为主键 ID。",
+                    "type": "integer"
+                },
+                "last_total_visit_count_at": {
+                    "description": "LastTotalVisitCountAt 为上次统计总访问数量时间。",
+                    "type": "string"
+                },
+                "recognized_link_count": {
+                    "description": "RecognizedLinkCount 为识别到的链接数量。",
+                    "type": "integer"
+                },
+                "response_mode": {
+                    "description": "ResponseMode 为转换生成链接的响应模式。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ResponseMode"
+                        }
+                    ]
+                },
+                "source_text": {
+                    "description": "SourceText 为原始文本内容。",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Status 为当前转换状态。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ConversionStatus"
+                        }
+                    ]
+                },
+                "total_visit_count": {
+                    "description": "TotalVisitCount 为关联链接的总访问数量。",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "description": "UpdatedAt 为更新时间。",
+                    "type": "string"
+                }
+            }
+        },
         "response.BatchTextDetailResponse": {
             "type": "object",
             "properties": {
@@ -1480,8 +1593,14 @@
                 "conversion_id": {
                     "type": "integer"
                 },
+                "conversion_record_count": {
+                    "type": "integer"
+                },
                 "message": {
                     "type": "string"
+                },
+                "recognized_link_count": {
+                    "type": "integer"
                 },
                 "status": {
                     "type": "string"
@@ -1523,14 +1642,23 @@
         "response.ConversionRecordItemResponse": {
             "type": "object",
             "properties": {
+                "batch_text": {
+                    "$ref": "#/definitions/response.BatchTextConversionDetailResponse"
+                },
                 "code": {
                     "type": "string"
                 },
                 "conversion_record_id": {
                     "type": "integer"
                 },
+                "conversion_type": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
+                },
+                "document_file": {
+                    "$ref": "#/definitions/response.DocumentFileConversionDetailResponse"
                 },
                 "link_id": {
                     "type": "integer"
@@ -1543,6 +1671,68 @@
                 },
                 "short_url": {
                     "type": "string"
+                },
+                "single_link": {
+                    "$ref": "#/definitions/response.SingleLinkConversionDetailResponse"
+                }
+            }
+        },
+        "response.DocumentFileConversionDetailResponse": {
+            "type": "object",
+            "properties": {
+                "converted_file_id": {
+                    "description": "ConvertedFileID 为转换后文件 ID。",
+                    "type": "integer"
+                },
+                "created_at": {
+                    "description": "CreatedAt 为创建时间。",
+                    "type": "string"
+                },
+                "download_url": {
+                    "type": "string"
+                },
+                "file_id": {
+                    "description": "FileID 为原始文件 ID。",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "ID 为主键 ID。",
+                    "type": "integer"
+                },
+                "last_total_visit_count_at": {
+                    "description": "LastTotalVisitCountAt 为上次统计总访问数量时间。",
+                    "type": "string"
+                },
+                "recognized_link_count": {
+                    "description": "RecognizedLinkCount 为识别到的链接数量。",
+                    "type": "integer"
+                },
+                "response_mode": {
+                    "description": "ResponseMode 为转换生成链接的响应模式。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ResponseMode"
+                        }
+                    ]
+                },
+                "status": {
+                    "description": "Status 为当前转换状态。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ConversionStatus"
+                        }
+                    ]
+                },
+                "total_visit_count": {
+                    "description": "TotalVisitCount 为关联链接的总访问数量。",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "description": "UpdatedAt 为更新时间。",
+                    "type": "string"
+                },
+                "uploaded_file": {
+                    "$ref": "#/definitions/model.StoredFile"
                 }
             }
         },
@@ -1657,6 +1847,51 @@
             "properties": {
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "response.SingleLinkConversionDetailResponse": {
+            "type": "object",
+            "properties": {
+                "batch_text_conversion_id": {
+                    "description": "BatchTextConversionID 表示所属批量文本转换记录 ID，可为空。",
+                    "type": "integer"
+                },
+                "code": {
+                    "description": "Code 为短链唯一码，需全局唯一。",
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "CreatedAt 为创建时间。",
+                    "type": "string"
+                },
+                "document_file_conversion_id": {
+                    "description": "DocumentFileConversionID 表示所属文档文件转换记录 ID，可为空。",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "ID 为主键 ID。",
+                    "type": "integer"
+                },
+                "original_url": {
+                    "description": "OriginalURL 为用户提交的原始链接。",
+                    "type": "string"
+                },
+                "response_mode": {
+                    "description": "ResponseMode 为短链访问时的响应模式。",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ResponseMode"
+                        }
+                    ]
+                },
+                "updated_at": {
+                    "description": "UpdatedAt 为更新时间。",
+                    "type": "string"
+                },
+                "visit_count": {
+                    "description": "VisitCount 为短链被访问的累计次数。",
+                    "type": "integer"
                 }
             }
         },

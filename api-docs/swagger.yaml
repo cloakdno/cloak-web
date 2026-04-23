@@ -8,6 +8,48 @@ definitions:
     x-enum-varnames:
     - ResponseModeRedirect
     - ResponseModeProxy
+  model.ConversionStatus:
+    enum:
+    - success
+    - failed
+    - processing
+    type: string
+    x-enum-varnames:
+    - ConversionStatusSuccess
+    - ConversionStatusFailed
+    - ConversionStatusProcessing
+  model.ResponseMode:
+    enum:
+    - redirect
+    - proxy
+    type: string
+    x-enum-varnames:
+    - ResponseModeRedirect
+    - ResponseModeProxy
+  model.StoredFile:
+    properties:
+      created_at:
+        description: CreatedAt 为创建时间。
+        type: string
+      file_name:
+        description: FileName 为原始文件名。
+        type: string
+      file_size:
+        description: FileSize 为文件大小（字节）。
+        type: integer
+      file_type:
+        description: FileType 为文件 MIME 类型。
+        type: string
+      id:
+        description: ID 为主键 ID。
+        type: integer
+      save_directory:
+        description: SaveDirectory 为文件保存目录。
+        type: string
+      updated_at:
+        description: UpdatedAt 为更新时间。
+        type: string
+    type: object
   request.BatchHideRequest:
     properties:
       response_mode:
@@ -23,8 +65,8 @@ definitions:
         type: string
       source_text:
         type: string
-    required:
-    - source_text
+      sourceText:
+        type: string
     type: object
   request.BatchTextUpdateResponseModeRequest:
     properties:
@@ -102,6 +144,43 @@ definitions:
           $ref: '#/definitions/response.BatchHideItemResponse'
         type: array
     type: object
+  response.BatchTextConversionDetailResponse:
+    properties:
+      converted_text:
+        description: ConvertedText 为转换后的文本内容。
+        type: string
+      created_at:
+        description: CreatedAt 为创建时间。
+        type: string
+      download_url:
+        type: string
+      id:
+        description: ID 为主键 ID。
+        type: integer
+      last_total_visit_count_at:
+        description: LastTotalVisitCountAt 为上次统计总访问数量时间。
+        type: string
+      recognized_link_count:
+        description: RecognizedLinkCount 为识别到的链接数量。
+        type: integer
+      response_mode:
+        allOf:
+        - $ref: '#/definitions/model.ResponseMode'
+        description: ResponseMode 为转换生成链接的响应模式。
+      source_text:
+        description: SourceText 为原始文本内容。
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/model.ConversionStatus'
+        description: Status 为当前转换状态。
+      total_visit_count:
+        description: TotalVisitCount 为关联链接的总访问数量。
+        type: integer
+      updated_at:
+        description: UpdatedAt 为更新时间。
+        type: string
+    type: object
   response.BatchTextDetailResponse:
     properties:
       converted_text:
@@ -127,8 +206,12 @@ definitions:
     properties:
       conversion_id:
         type: integer
+      conversion_record_count:
+        type: integer
       message:
         type: string
+      recognized_link_count:
+        type: integer
       status:
         type: string
     type: object
@@ -155,12 +238,18 @@ definitions:
     type: object
   response.ConversionRecordItemResponse:
     properties:
+      batch_text:
+        $ref: '#/definitions/response.BatchTextConversionDetailResponse'
       code:
         type: string
       conversion_record_id:
         type: integer
+      conversion_type:
+        type: string
       created_at:
         type: string
+      document_file:
+        $ref: '#/definitions/response.DocumentFileConversionDetailResponse'
       link_id:
         type: integer
       original_url:
@@ -169,6 +258,47 @@ definitions:
         type: string
       short_url:
         type: string
+      single_link:
+        $ref: '#/definitions/response.SingleLinkConversionDetailResponse'
+    type: object
+  response.DocumentFileConversionDetailResponse:
+    properties:
+      converted_file_id:
+        description: ConvertedFileID 为转换后文件 ID。
+        type: integer
+      created_at:
+        description: CreatedAt 为创建时间。
+        type: string
+      download_url:
+        type: string
+      file_id:
+        description: FileID 为原始文件 ID。
+        type: integer
+      id:
+        description: ID 为主键 ID。
+        type: integer
+      last_total_visit_count_at:
+        description: LastTotalVisitCountAt 为上次统计总访问数量时间。
+        type: string
+      recognized_link_count:
+        description: RecognizedLinkCount 为识别到的链接数量。
+        type: integer
+      response_mode:
+        allOf:
+        - $ref: '#/definitions/model.ResponseMode'
+        description: ResponseMode 为转换生成链接的响应模式。
+      status:
+        allOf:
+        - $ref: '#/definitions/model.ConversionStatus'
+        description: Status 为当前转换状态。
+      total_visit_count:
+        description: TotalVisitCount 为关联链接的总访问数量。
+        type: integer
+      updated_at:
+        description: UpdatedAt 为更新时间。
+        type: string
+      uploaded_file:
+        $ref: '#/definitions/model.StoredFile'
     type: object
   response.DocumentFileSubmitResponse:
     properties:
@@ -243,6 +373,37 @@ definitions:
     properties:
       message:
         type: string
+    type: object
+  response.SingleLinkConversionDetailResponse:
+    properties:
+      batch_text_conversion_id:
+        description: BatchTextConversionID 表示所属批量文本转换记录 ID，可为空。
+        type: integer
+      code:
+        description: Code 为短链唯一码，需全局唯一。
+        type: string
+      created_at:
+        description: CreatedAt 为创建时间。
+        type: string
+      document_file_conversion_id:
+        description: DocumentFileConversionID 表示所属文档文件转换记录 ID，可为空。
+        type: integer
+      id:
+        description: ID 为主键 ID。
+        type: integer
+      original_url:
+        description: OriginalURL 为用户提交的原始链接。
+        type: string
+      response_mode:
+        allOf:
+        - $ref: '#/definitions/model.ResponseMode'
+        description: ResponseMode 为短链访问时的响应模式。
+      updated_at:
+        description: UpdatedAt 为更新时间。
+        type: string
+      visit_count:
+        description: VisitCount 为短链被访问的累计次数。
+        type: integer
     type: object
   response.SingleLinkConvertResponse:
     properties:

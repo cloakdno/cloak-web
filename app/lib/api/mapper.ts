@@ -17,6 +17,9 @@ import type {
   LinkDetailResponse,
 } from "./types";
 
+type UiSource = "single" | "batch" | "file";
+type UiStatus = "converting" | "done";
+
 /**
  * 将 ISO 8601 日期字符串转换为 Unix 时间戳（毫秒）。
  * 若输入无效，返回当前时间戳。
@@ -36,6 +39,43 @@ function parseTimestamp(dateStr: string): number {
 function normalizeProxyMode(mode: string | undefined): ProxyMode {
   if (mode === "proxy") return "proxy";
   return "redirect"; // 默认值
+}
+
+/**
+ * 将后端 conversion_type 映射到前端来源标签。
+ */
+function normalizeSource(record: ConversionRecordItemResponse): UiSource {
+  if (record.conversion_type === "batch_text") return "batch";
+  if (record.conversion_type === "document_file") return "file";
+  return "single";
+}
+
+/**
+ * 历史记录中的任务状态仅在 batch_text/document_file 详情里提供：
+ * processing 映射为 converting，其余状态按已完成展示。
+ */
+function normalizeStatus(record: ConversionRecordItemResponse): UiStatus {
+  const status =
+    record.conversion_type === "batch_text"
+      ? record.batch_text?.status
+      : record.conversion_type === "document_file"
+        ? record.document_file?.status
+        : undefined;
+
+  return status === "processing" ? "converting" : "done";
+}
+
+/**
+ * 优先按任务级 ID 分组，缺失时回退到 conversion_record_id，避免错误折叠。
+ */
+function resolveBatchId(record: ConversionRecordItemResponse): string {
+  if (record.conversion_type === "batch_text" && record.batch_text?.id) {
+    return `batch-text-${record.batch_text.id}`;
+  }
+  if (record.conversion_type === "document_file" && record.document_file?.id) {
+    return `document-file-${record.document_file.id}`;
+  }
+  return `record-${record.conversion_record_id}`;
 }
 
 /**
@@ -85,9 +125,9 @@ export function mapSingleLinkConvertResponse(
 export function mapConversionRecordToShortLink(
   apiResp: ConversionRecordItemResponse
 ): ShortLink {
-  // 历史记录接口未返回真实 batch_id 时，必须为每条记录生成稳定且唯一的分组键。
-  // 否则会被 HistoryTable 按 batchId 折叠，出现“后端 3 条，前端只显示 1 条”。
-  const pseudoBatchId = `record-${apiResp.conversion_record_id}`;
+  const source = normalizeSource(apiResp);
+  const status = normalizeStatus(apiResp);
+  const batchId = resolveBatchId(apiResp);
 
   return {
     id: String(apiResp.conversion_record_id),
@@ -95,10 +135,10 @@ export function mapConversionRecordToShortLink(
     shortCode: apiResp.code,
     shortUrl: apiResp.short_url,
     createdAt: parseTimestamp(apiResp.created_at),
-    source: "single", // 历史列表仅展示单链，批量/文件由具体业务确定
+    source,
     visits: [],
-    batchId: pseudoBatchId,
-    status: "done",
+    batchId,
+    status,
     proxyMode: normalizeProxyMode(apiResp.response_mode),
   };
 }
