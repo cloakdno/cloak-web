@@ -209,7 +209,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 密码无法自助找回，请通过 Telegram 联系客服为你重置密码。
               </p>
               <a
-                href="https://t.me/cloak_dev"
+                href="https://t.me/nuoyea"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-semibold transition-colors"

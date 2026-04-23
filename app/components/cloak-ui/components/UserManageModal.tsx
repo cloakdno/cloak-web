@@ -1,16 +1,31 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, UserCog, Link as LinkIcon, Calendar, KeyRound } from 'lucide-react'
+import { UserProfileResponse } from '@/app/lib/api'
 
 interface UserManageModalProps {
   isOpen: boolean
   onClose: () => void
   username: string
+  profile: UserProfileResponse | null
+  isLoading: boolean
   onChangeUsername: () => void
   onChangePassword: () => void
 }
 
-export function UserManageModal({ isOpen, onClose, username, onChangeUsername, onChangePassword }: UserManageModalProps) {
+export function UserManageModal({
+  isOpen,
+  onClose,
+  username,
+  profile,
+  isLoading,
+  onChangeUsername,
+  onChangePassword,
+}: UserManageModalProps) {
+  const createdAtLabel = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString()
+    : '--'
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -67,13 +82,15 @@ export function UserManageModal({ isOpen, onClose, username, onChangeUsername, o
               <div className="mb-6 grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-center">
                   <LinkIcon size={16} className="mx-auto mb-1 text-gray-400" />
-                  <p className="text-lg font-bold text-gray-900">128</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {isLoading ? '--' : profile?.total_links ?? 0}
+                  </p>
                   <p className="text-[11px] text-gray-500">总链接</p>
                 </div>
                 <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-center">
                   <Calendar size={16} className="mx-auto mb-1 text-gray-400" />
                   <p className="text-lg font-bold text-gray-900">
-                    45
+                    {isLoading ? '--' : profile?.registered_days ?? 0}
                     <span className="text-xs font-normal text-gray-400">天</span>
                   </p>
                   <p className="text-[11px] text-gray-500">已使用</p>
@@ -83,18 +100,7 @@ export function UserManageModal({ isOpen, onClose, username, onChangeUsername, o
               <div className="mb-6 divide-y divide-gray-100 rounded-xl border border-gray-200">
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-sm text-gray-500">注册时间</span>
-                  <span className="text-sm font-medium text-gray-900">2026-03-08</span>
-                </div>
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-gray-500">到期时间</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">2026-05-22</span>
-                    <span className="rounded px-1.5 py-0.5 text-[10px] font-bold text-green-700 bg-green-100">有效</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-gray-500">套餐类型</span>
-                  <span className="text-sm font-medium text-gray-900">标准版</span>
+                  <span className="text-sm font-medium text-gray-900">{createdAtLabel}</span>
                 </div>
               </div>
 

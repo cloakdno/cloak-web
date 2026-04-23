@@ -13,13 +13,37 @@ import {
 import { ChangePasswordModal } from './ChangePasswordModal'
 import { UserManageModal } from './UserManageModal'
 import { ChangeUsernameModal } from './ChangeUsernameModal'
+import { SystemExpiryResponse, UserProfileResponse } from '@/app/lib/api'
 
 interface HeaderProps {
   username: string
+  profile: UserProfileResponse | null
+  expiryInfo: SystemExpiryResponse | null
+  isExpiryLoading: boolean
+  isProfileLoading: boolean
+  onChangeUsername: (newUsername: string) => Promise<void>
+  onChangePassword: (payload: { oldPassword: string; newPassword: string }) => Promise<void>
+  usernameError: string
+  passwordError: string
+  isUpdatingUsername: boolean
+  isUpdatingPassword: boolean
   onLogout: () => void
 }
 
-export function Header({ username, onLogout }: HeaderProps) {
+export function Header({
+  username,
+  profile,
+  expiryInfo,
+  isExpiryLoading,
+  isProfileLoading,
+  onChangeUsername,
+  onChangePassword,
+  usernameError,
+  passwordError,
+  isUpdatingUsername,
+  isUpdatingPassword,
+  onLogout,
+}: HeaderProps) {
   const [showModal, setShowModal] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -37,6 +61,25 @@ export function Header({ username, onLogout }: HeaderProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const formatExpiryDate = (value: string) => {
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) {
+      return value.split('T')[0] || value
+    }
+
+    return parsed.toLocaleDateString('zh-CN')
+  }
+
+  const expiryLabel = (() => {
+    if (isExpiryLoading) return '到期时间：加载中...'
+    if (!expiryInfo) return '到期时间：--'
+    if (expiryInfo.never_expires) return '到期时间：永不过期'
+    if (expiryInfo.is_expired) return '到期时间：已过期'
+    return `到期时间：${formatExpiryDate(expiryInfo.expiry_time_formatted || '--')}`
+  })()
+
+  const compactExpiryLabel = expiryLabel.replace('到期时间：', '到期：')
+
   return (
     <>
       <header className="w-full py-4 px-4 sm:py-6 sm:px-8 flex items-center justify-between text-white">
@@ -49,7 +92,7 @@ export function Header({ username, onLogout }: HeaderProps) {
         <div className="flex items-center gap-2 sm:gap-4 text-sm font-medium">
           <div className="hidden sm:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg backdrop-blur-sm">
             <Clock size={14} className="text-purple-200" />
-            <span className="text-purple-100">到期时间：2026-05-22</span>
+            <span className="text-purple-100">{expiryLabel}</span>
           </div>
           <button
             onClick={() => setShowModal(true)}
@@ -73,7 +116,7 @@ export function Header({ username, onLogout }: HeaderProps) {
                 </div>
                 <div className="sm:hidden px-4 py-2.5 border-b border-gray-100 flex items-center gap-2">
                   <Clock size={14} className="text-gray-400" />
-                  <span className="text-xs text-gray-500">到期：2026-05-22</span>
+                  <span className="text-xs text-gray-500">{compactExpiryLabel}</span>
                 </div>
                 <div className="py-1">
                   <button
@@ -142,7 +185,9 @@ export function Header({ username, onLogout }: HeaderProps) {
               <div className="flex items-center gap-2 mb-5 px-4 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
                 <Clock size={15} className="text-gray-400 shrink-0" />
                 <span className="text-sm text-gray-600">当前到期时间：</span>
-                <span className="text-sm font-semibold text-gray-800">2026-05-22</span>
+                <span className="text-sm font-semibold text-gray-800">
+                  {expiryLabel.replace('到期时间：', '')}
+                </span>
               </div>
 
               <div className="space-y-4 mb-6">
@@ -183,7 +228,7 @@ export function Header({ username, onLogout }: HeaderProps) {
               <p className="text-center text-sm text-gray-400 mb-6">🚀 功能持续更新中，敬请期待更多新功能</p>
 
               <a
-                href="https://t.me/cloak_dev"
+                href="https://t.me/nuoyea"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-semibold transition-colors"
@@ -196,12 +241,21 @@ export function Header({ username, onLogout }: HeaderProps) {
         </div>
       )}
 
-      {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
+      {showPasswordModal && (
+        <ChangePasswordModal
+          onClose={() => setShowPasswordModal(false)}
+          onSubmit={onChangePassword}
+          isSubmitting={isUpdatingPassword}
+          submitError={passwordError}
+        />
+      )}
 
       <UserManageModal
         isOpen={showUserModal}
         onClose={() => setShowUserModal(false)}
         username={username}
+        profile={profile}
+        isLoading={isProfileLoading}
         onChangeUsername={() => {
           setShowUserModal(false)
           setShowUsernameModal(true)
@@ -212,7 +266,14 @@ export function Header({ username, onLogout }: HeaderProps) {
         }}
       />
 
-      <ChangeUsernameModal isOpen={showUsernameModal} onClose={() => setShowUsernameModal(false)} username={username} />
+      <ChangeUsernameModal
+        isOpen={showUsernameModal}
+        onClose={() => setShowUsernameModal(false)}
+        username={username}
+        onSubmit={onChangeUsername}
+        isSubmitting={isUpdatingUsername}
+        submitError={usernameError}
+      />
     </>
   )
 }

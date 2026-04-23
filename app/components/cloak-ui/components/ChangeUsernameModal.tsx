@@ -6,14 +6,24 @@ interface ChangeUsernameModalProps {
   isOpen: boolean
   onClose: () => void
   username: string
+  onSubmit: (newUsername: string) => Promise<void>
+  isSubmitting: boolean
+  submitError: string
 }
 
-export function ChangeUsernameModal({ isOpen, onClose, username }: ChangeUsernameModalProps) {
+export function ChangeUsernameModal({
+  isOpen,
+  onClose,
+  username,
+  onSubmit,
+  isSubmitting,
+  submitError,
+}: ChangeUsernameModalProps) {
   const [newName, setNewName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!newName.trim()) {
       setError('请输入新用户名')
       return
@@ -27,12 +37,17 @@ export function ChangeUsernameModal({ isOpen, onClose, username }: ChangeUsernam
       return
     }
     setError('')
-    setSuccess(true)
-    setTimeout(() => {
-      setSuccess(false)
-      setNewName('')
-      onClose()
-    }, 1500)
+    try {
+      await onSubmit(newName.trim())
+      setSuccess(true)
+      setTimeout(() => {
+        setSuccess(false)
+        setNewName('')
+        onClose()
+      }, 1500)
+    } catch {
+      // 错误由父组件统一处理并透传展示
+    }
   }
 
   const handleClose = () => {
@@ -85,9 +100,14 @@ export function ChangeUsernameModal({ isOpen, onClose, username }: ChangeUsernam
                     setNewName(e.target.value)
                     setError('')
                   }}
+                  disabled={isSubmitting || success}
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 transition-all focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                   placeholder="输入新用户名"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      void handleSubmit()
+                    }
+                  }}
                 />
               </div>
 
@@ -95,6 +115,13 @@ export function ChangeUsernameModal({ isOpen, onClose, username }: ChangeUsernam
                 <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-500">
                   <AlertCircle size={16} />
                   {error}
+                </div>
+              )}
+
+              {!error && submitError && (
+                <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-500">
+                  <AlertCircle size={16} />
+                  {submitError}
                 </div>
               )}
 
@@ -116,11 +143,11 @@ export function ChangeUsernameModal({ isOpen, onClose, username }: ChangeUsernam
                   取消
                 </button>
                 <button
-                  onClick={handleSubmit}
-                  disabled={success}
+                  onClick={() => void handleSubmit()}
+                  disabled={success || isSubmitting}
                   className="flex-1 rounded-xl bg-purple-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:bg-purple-300"
                 >
-                  确认修改
+                  {isSubmitting ? '提交中...' : '确认修改'}
                 </button>
               </div>
             </div>

@@ -18,6 +18,8 @@ import {
   ApiClient, 
   ApiError,
   convertSingleLink,
+  getUserProfile,
+  getSystemExpiry,
   submitBatchTextConvert,
   getBatchTextDetail,
   submitDocumentFileConvert,
@@ -26,11 +28,15 @@ import {
   deleteLink,
   deleteBatchText,
   deleteDocumentFile,
+  updateUsername,
+  updatePassword,
   updateLinkOriginalUrl,
   updateLinkResponseMode,
   updateBatchTextResponseMode,
   updateDocumentFileResponseMode,
   BatchTextDetailResponse,
+  SystemExpiryResponse,
+  UserProfileResponse,
   downloadDocumentFile,
   mapSingleLinkConvertResponse,
   mapConversionRecordToShortLink,
@@ -47,8 +53,18 @@ const BATCH_POLL_MAX_ATTEMPTS = 40
 
 export function App() {
   const [user, setUser] = useState<string | null>(null)
+  const [authPassword, setAuthPassword] = useState<string | null>(null)
   /** 已认证的 API 客户端，登录后创建，登出时清除 */
   const [apiClient, setApiClient] = useState<ApiClient | null>(null)
+  const [profile, setProfile] = useState<UserProfileResponse | null>(null)
+  const [expiryInfo, setExpiryInfo] = useState<SystemExpiryResponse | null>(null)
+  const [isProfileLoading, setIsProfileLoading] = useState(false)
+  const [isExpiryLoading, setIsExpiryLoading] = useState(false)
+  const [usernameError, setUsernameError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [isUpdatingUsername, setIsUpdatingUsername] = useState(false)
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('single')
   const [proxyMode, setProxyMode] = useState<ProxyMode>('redirect')
   const [links, setLinks] = useState<ShortLink[]>([])
@@ -105,10 +121,11 @@ export function App() {
       if (raw) {
         const { username: u, password: p } = JSON.parse(raw) as { username: string; password: string }
         if (u && p) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setUser(u)
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setApiClient(createApiClient(u, p))
+          queueMicrotask(() => {
+            setUser(u)
+            setAuthPassword(p)
+            setApiClient(createApiClient(u, p))
+          })
         }
       }
     } catch {
@@ -202,6 +219,55 @@ export function App() {
     setLinks(demoLinks)
   }, [apiClient])
 
+  useEffect(() => {
+    if (!apiClient) return
+
+    const loadProfile = async () => {
+      setIsProfileLoading(true)
+      try {
+        const profileResponse = await getUserProfile(apiClient)
+        setProfile(profileResponse)
+        setUser(profileResponse.username)
+      } catch (err) {
+        console.error('Failed to load user profile:', err)
+        setProfile(null)
+      } finally {
+        setIsProfileLoading(false)
+      }
+    }
+
+    void loadProfile()
+  }, [apiClient])
+
+  useEffect(() => {
+    if (!apiClient) return
+
+    const loadExpiry = async () => {
+      setIsExpiryLoading(true)
+      try {
+        const expiryResponse = await getSystemExpiry(apiClient)
+        setExpiryInfo(expiryResponse)
+      } catch (err) {
+        console.error('Failed to load expiry info:', err)
+        setExpiryInfo(null)
+      } finally {
+        setIsExpiryLoading(false)
+      }
+    }
+
+    void loadExpiry()
+  }, [apiClient])
+
+  useEffect(() => {
+    if (!successMessage) return
+
+    const timer = window.setTimeout(() => {
+      setSuccessMessage('')
+    }, 2500)
+
+    return () => window.clearTimeout(timer)
+  }, [successMessage])
+
   // 当登录成功（apiClient 存在）时，从服务端加载历史记录
   useEffect(() => {
     if (!apiClient) return
@@ -230,6 +296,7 @@ export function App() {
 
   const handleLogin = (username: string, pw: string) => {
     setUser(username)
+    setAuthPassword(pw)
     setApiClient(createApiClient(username, pw))
     // 将用户名和密码序列化为 JSON 持久化，供下次刷新恢复 session
     localStorage.setItem(AUTH_KEY, JSON.stringify({ username, password: pw }))
@@ -238,8 +305,77 @@ export function App() {
   const handleLogout = () => {
     stopBatchPolling()
     setUser(null)
+    setAuthPassword(null)
     setApiClient(null)
+    setProfile(null)
+    setExpiryInfo(null)
     localStorage.removeItem(AUTH_KEY)
+  }
+
+  const handleChangeUsername = async (newUsername: string) => {
+    if (!apiClient || !authPassword) {
+      throw new Error('API client not initialized')
+    }
+
+    setUsernameError('')
+    setIsUpdatingUsername(true)
+    try {
+      const response = await updateUsername(apiClient, { username: newUsername })
+      const nextUsername = response.profile.username
+      setUser(nextUsername)
+      setProfile(response.profile)
+
+      const nextClient = createApiClient(nextUsername, authPassword)
+      setApiClient(nextClient)
+      localStorage.setItem(
+        AUTH_KEY,
+        JSON.stringify({ username: nextUsername, password: authPassword }),
+      )
+      setSuccessMessage('用户名修改成功')
+    } catch (err) {
+      console.error('Failed to update username:', err)
+      const message =
+        err instanceof ApiError ? `${err.message} (${err.code})` : '修改用户名失败'
+      setUsernameError(message)
+      throw err
+    } finally {
+      setIsUpdatingUsername(false)
+    }
+  }
+
+  const handleChangePassword = async (payload: {
+    oldPassword: string
+    newPassword: string
+  }) => {
+    if (!apiClient || !user) {
+      throw new Error('API client not initialized')
+    }
+
+    setPasswordError('')
+    setIsUpdatingPassword(true)
+    try {
+      await updatePassword(apiClient, {
+        old_password: payload.oldPassword,
+        new_password: payload.newPassword,
+      })
+
+      setAuthPassword(payload.newPassword)
+      const nextClient = createApiClient(user, payload.newPassword)
+      setApiClient(nextClient)
+      localStorage.setItem(
+        AUTH_KEY,
+        JSON.stringify({ username: user, password: payload.newPassword }),
+      )
+      setSuccessMessage('密码修改成功')
+    } catch (err) {
+      console.error('Failed to update password:', err)
+      const message =
+        err instanceof ApiError ? `${err.message} (${err.code})` : '修改密码失败'
+      setPasswordError(message)
+      throw err
+    } finally {
+      setIsUpdatingPassword(false)
+    }
   }
 
   const handleSingleConvert = async (url: string) => {
@@ -675,7 +811,26 @@ export function App() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800">
-      <Header username={user} onLogout={handleLogout} />
+      <Header
+        username={user}
+        profile={profile}
+        expiryInfo={expiryInfo}
+        isExpiryLoading={isExpiryLoading}
+        isProfileLoading={isProfileLoading}
+        onChangeUsername={handleChangeUsername}
+        onChangePassword={handleChangePassword}
+        usernameError={usernameError}
+        passwordError={passwordError}
+        isUpdatingUsername={isUpdatingUsername}
+        isUpdatingPassword={isUpdatingPassword}
+        onLogout={handleLogout}
+      />
+
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
+          {successMessage}
+        </div>
+      )}
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6 sm:pb-16">
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-8 lg:p-10 mb-8">
@@ -750,7 +905,7 @@ export function App() {
           <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-purple-200 text-sm">© 2026 Cloak. All rights reserved.</p>
             <a
-              href="https://t.me/cloak_dev"
+              href="https://t.me/nuoyea"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-white/80 hover:text-white text-sm font-medium transition-colors"
