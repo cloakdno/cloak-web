@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Header } from './components/Header'
 import { TabSwitcher } from './components/TabSwitcher'
@@ -12,13 +12,13 @@ import { EditModal } from './components/EditModal'
 import { LoginPage } from './components/LoginPage'
 import { VisitLogModal } from './components/VisitLogModal'
 import { ShortLink, ProxyMode } from './types/index'
-import { createShortLink, generateMockVisits } from './utils/shortlink'
+import { createShortLink, extractHttpUrls, generateMockVisits } from './utils/shortlink'
 import { 
   createApiClient, 
   ApiClient, 
   ApiError,
   convertSingleLink,
-  batchConvertLinks,
+  submitBatchTextConvert,
   listConversions,
   searchConversions,
   deleteLink,
@@ -26,7 +26,6 @@ import {
   updateLinkResponseMode,
   mapSingleLinkConvertResponse,
   mapConversionRecordToShortLink,
-  mapBatchHideItemResponse,
 } from '@/app/lib/api'
 import { Send, ArrowRightLeft, Globe } from 'lucide-react'
 
@@ -35,6 +34,8 @@ type Tab = 'single' | 'batch' | 'file'
 const STORAGE_KEY = 'cloak-links-history'
 /** localStorage key，值为 JSON 序列化的 { username: string; password: string } */
 const AUTH_KEY = 'cloak-auth-user'
+const BATCH_POLL_INTERVAL_MS = 3000
+const BATCH_POLL_MAX_ATTEMPTS = 40
 
 export function App() {
   const [user, setUser] = useState<string | null>(null)
@@ -47,6 +48,47 @@ export function App() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [visitLogLink, setVisitLogLink] = useState<ShortLink | null>(null)
   const [pendingConvert, setPendingConvert] = useState<(() => void) | null>(null)
+  const batchPollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const batchPollingAttemptsRef = useRef(0)
+
+  const stopBatchPolling = () => {
+    if (batchPollingTimerRef.current) {
+      clearInterval(batchPollingTimerRef.current)
+      batchPollingTimerRef.current = null
+    }
+    batchPollingAttemptsRef.current = 0
+  }
+
+  const startBatchPolling = (client: ApiClient) => {
+    stopBatchPolling()
+
+    batchPollingTimerRef.current = setInterval(async () => {
+      try {
+        batchPollingAttemptsRef.current += 1
+
+        const response = await listConversions(client, { page: 1, size: 100 })
+        const mappedLinks = response.items.map(mapConversionRecordToShortLink)
+        setLinks(mappedLinks)
+
+        const hasProcessing = mappedLinks.some((link) => link.status === 'converting')
+        const reachMaxAttempts =
+          batchPollingAttemptsRef.current >= BATCH_POLL_MAX_ATTEMPTS
+
+        if (!hasProcessing || reachMaxAttempts) {
+          stopBatchPolling()
+        }
+      } catch (err) {
+        console.error('Batch polling failed:', err)
+        stopBatchPolling()
+      }
+    }, BATCH_POLL_INTERVAL_MS)
+  }
+
+  useEffect(() => {
+    return () => {
+      stopBatchPolling()
+    }
+  }, [])
 
   useEffect(() => {
     // 从 localStorage 恢复登录凭证（JSON 格式：{ username, password }）
@@ -186,6 +228,7 @@ export function App() {
   }
 
   const handleLogout = () => {
+    stopBatchPolling()
     setUser(null)
     setApiClient(null)
     localStorage.removeItem(AUTH_KEY)
@@ -246,12 +289,13 @@ export function App() {
     }
   }
 
-  const handleBatchConvert = async (urls: string[]) => {
+  const handleBatchConvert = async (sourceText: string) => {
     if (!apiClient) {
       console.error('API client not initialized')
       return
     }
 
+    const urls = extractHttpUrls(sourceText)
     const batchId = crypto.randomUUID()
     const newLinks = urls.map((url) => {
       const link = createShortLink(url, 'batch', batchId, proxyMode)
@@ -262,37 +306,25 @@ export function App() {
     setLinks((prev) => [...newLinks, ...prev])
 
     try {
-      // 调用后端批量转换接口；后端会逐条返回成功/失败结果。
-      const apiResponse = await batchConvertLinks(apiClient, {
-        urls,
+      // 批量文本转换接口要求 source_text，需提交用户完整输入内容。
+      const apiResponse = await submitBatchTextConvert(apiClient, {
+        source_text: sourceText,
         response_mode: proxyMode,
       })
 
-      // 仅保留成功项并映射为 UI 记录；失败项不入列表，同时统一给出失败提示。
-      const successLinks = apiResponse.items
-        .filter((item) => !item.fail_cause || item.fail_cause.trim().length === 0)
-        .map((item, index) => {
-          const mapped = mapBatchHideItemResponse(item, batchId)
-          return {
-            ...mapped,
-            // 同一 URL 可能重复提交，需确保每条记录 ID 唯一，避免 React key 冲突。
-            id: `${mapped.id}-${index}`,
-            status: 'done' as const,
-          }
-        })
+      // 提交成功后以服务端历史为准刷新列表，避免继续依赖旧接口的逐条返回结构。
+      const refreshed = await listConversions(apiClient, { page: 1, size: 100 })
+      const mappedLinks = refreshed.items.map(mapConversionRecordToShortLink)
+      setLinks(mappedLinks)
 
-      setLinks((prev) => {
-        // 移除本次批量任务的临时“转换中”占位项，替换为真实成功结果。
-        const withoutPending = prev.filter(
-          (link) => !(link.batchId === batchId && link.status === 'converting'),
-        )
-        return [...successLinks, ...withoutPending]
-      })
-
-      const failedCount = apiResponse.items.length - successLinks.length
-      if (failedCount > 0) {
-        window.alert(`批量转换完成，成功 ${successLinks.length} 条，失败 ${failedCount} 条。`)
+      // 自动轮询任务状态，直到 processing 全部结束或达到最大轮询次数。
+      if (mappedLinks.some((link) => link.status === 'converting')) {
+        startBatchPolling(apiClient)
       }
+
+      window.alert(
+        `批量任务已提交：识别 ${apiResponse.recognized_link_count} 条链接，生成 ${apiResponse.conversion_record_count} 条记录。`,
+      )
     } catch (err) {
       // 批量接口整体失败时，回滚本次临时占位项。
       setLinks((prev) => prev.filter((link) => link.batchId !== batchId))
@@ -533,7 +565,7 @@ export function App() {
               <SingleConvert key="single" onConvert={(url) => setPendingConvert(() => () => handleSingleConvert(url))} />
             )}
             {activeTab === 'batch' && (
-              <BatchConvert key="batch" onConvert={(urls) => setPendingConvert(() => () => handleBatchConvert(urls))} />
+              <BatchConvert key="batch" onConvert={(sourceText) => setPendingConvert(() => () => handleBatchConvert(sourceText))} />
             )}
             {activeTab === 'file' && (
               <FileConvert key="file" onConvert={(urls) => setPendingConvert(() => () => handleFileConvert(urls))} />

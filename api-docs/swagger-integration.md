@@ -218,8 +218,8 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
       "conversion_type": "batch_text",
       "batch_text": {
         "id": 12,
-        "source_text": "visit https://batch.example.com",
-        "converted_text": "visit http://localhost:9000/batch001",
+        "source_text": "",
+        "converted_text": "",
         "recognized_link_count": 1,
         "status": "success",
         "total_visit_count": 0,
@@ -271,6 +271,22 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
   "total": 3
 }
 ```
+
+### 4.6 转换记录字段策略（前端必读）
+
+- 批量文本任务提交接口 `POST /api/batch-text/batch`：每个任务仅写入 1 条 `conversion_records` 记录。
+- 转换列表接口 `GET /api/conversions` 与 `GET /api/conversions/search`：
+  - `batch_text.created_at`、`batch_text.updated_at`、`batch_text.total_visit_count`、`batch_text.recognized_link_count`、`batch_text.status`、`batch_text.response_mode` 与数据库 `batch_text_conversions` 保持一致。
+  - `batch_text.source_text` 固定返回空字符串 `""`。
+  - `batch_text.converted_text` 固定返回空字符串 `""`。
+- 设计目的：避免在分页列表中返回超大文本，降低接口响应体积，提升页面加载速度。
+
+字段迁移说明：
+
+- 旧：`batch_text.conversion_id`
+- 新：`batch_text.id`
+- 旧：`single_link.conversion_record_id`
+- 新：`single_link.id`（对应 `links.id`）
 
 ## 5. 统一错误响应格式
 
@@ -398,6 +414,11 @@ go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs --parseDep
 
 - 使用返回的 has_next、has_prev、next_page、prev_page 驱动分页控件。
 - 搜索关键词变更时重置到第 1 页。
+- `batch_text` 字段读取策略：`source_text` 与 `converted_text` 固定为空字符串，不要依赖该接口返回大文本内容。
+- 若用户需要查看批量文本原文与转换结果，请跳转任务详情接口 `GET /api/batch-text/{id}` 或下载接口 `GET /api/batch-text/{id}/download`。
+- 批量任务在 `conversion_records` 中仅有一条聚合记录，列表中不再按每个识别链接展开多条批量记录。
+- 字段兼容迁移：`batch_text.conversion_id` 改为 `batch_text.id`，`single_link.conversion_record_id` 改为 `single_link.id`。
+- 列表页建议缓存 `code`、`conversion_type`、`batch_text.id`、`batch_text.total_visit_count`、`batch_text.updated_at` 等轻量字段，避免缓存详情大文本。
 
 ### 8.7 鉴权请求头示例
 

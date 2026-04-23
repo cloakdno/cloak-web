@@ -26,6 +26,7 @@ export interface ShortLink {
   source: ConversionSource
   visits: VisitLog[]
   batchId: string
+  recognizedLinkCount?: number
   status: LinkStatus
   proxyMode: ProxyMode
 }

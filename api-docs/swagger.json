@@ -15,7 +15,7 @@
                         "BasicAuth": []
                     }
                 ],
-                "description": "提交原始文本，后台识别并转换其中的链接。",
+                "description": "提交原始文本，后台识别并转换其中的链接。每个批量任务在 conversion_records 中仅保留一条聚合记录。",
                 "consumes": [
                     "application/json"
                 ],

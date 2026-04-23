@@ -128,6 +128,9 @@ export function mapConversionRecordToShortLink(
   const source = normalizeSource(apiResp);
   const status = normalizeStatus(apiResp);
   const batchId = resolveBatchId(apiResp);
+  const recognizedLinkCount =
+    apiResp.batch_text?.recognized_link_count ??
+    apiResp.document_file?.recognized_link_count;
 
   return {
     id: String(apiResp.conversion_record_id),
@@ -138,6 +141,7 @@ export function mapConversionRecordToShortLink(
     source,
     visits: [],
     batchId,
+    recognizedLinkCount,
     status,
     proxyMode: normalizeProxyMode(apiResp.response_mode),
   };

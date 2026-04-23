@@ -117,6 +117,14 @@ export function HistoryTable({
     return total
   }
 
+  const getGroupRecognizedCount = (group: ConversionGroup) => {
+    const recognizedLinkCount = group.links.find(
+      (link) => typeof link.recognizedLinkCount === 'number',
+    )?.recognizedLinkCount
+
+    return recognizedLinkCount ?? group.links.length
+  }
+
   const getSourceMeta = (source: ShortLink['source']) => {
     if (source === 'file') {
       return {
@@ -404,6 +412,7 @@ export function HistoryTable({
     const actionDisabled = converting
     const groupIds = group.links.map((l) => l.id)
     const groupMode = group.links[0]?.proxyMode
+    const groupRecognizedCount = getGroupRecognizedCount(group)
     const isMenuOpen = openMenuId === group.batchId
 
     return (
@@ -422,7 +431,7 @@ export function HistoryTable({
                 {renderSourceBadge(group.source)}
                 {renderTaskStatusBadge(true)}
                 <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-400 rounded-full font-medium">
-                  {group.links.length} 条
+                  {groupRecognizedCount} 条
                 </span>
               </>
             ) : (
@@ -438,7 +447,7 @@ export function HistoryTable({
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isFile ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}
                 >
-                  {group.links.length} 条
+                  {groupRecognizedCount} 条
                 </span>
                 {renderSourceBadge(group.source)}
                 {renderTaskStatusBadge(false)}
@@ -448,7 +457,7 @@ export function HistoryTable({
         </td>
         <td className="p-4 hidden md:table-cell">
           <span className="text-sm text-gray-500">
-            {converting ? '正在转换...' : `${group.links.length} 条链接已转换`}
+            {converting ? '正在转换...' : `${groupRecognizedCount} 条链接已转换`}
           </span>
         </td>
         <td className="p-4 hidden lg:table-cell text-sm text-gray-500">
@@ -502,7 +511,7 @@ export function HistoryTable({
               )}
               <button
                 onClick={() => {
-                  if (window.confirm(`确定删除这 ${group.links.length} 条链接？`)) onDeleteGroup(group.batchId)
+                  if (window.confirm(`确定删除这 ${groupRecognizedCount} 条链接？`)) onDeleteGroup(group.batchId)
                 }}
                 disabled={actionDisabled}
                 className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
@@ -584,7 +593,7 @@ export function HistoryTable({
                   <div className="h-px bg-gray-100 my-1 mx-2" />
                   <button
                     onClick={() => {
-                      if (window.confirm(`确定删除这 ${group.links.length} 条链接？`)) onDeleteGroup(group.batchId)
+                      if (window.confirm(`确定删除这 ${groupRecognizedCount} 条链接？`)) onDeleteGroup(group.batchId)
                       setOpenMenuId(null)
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"

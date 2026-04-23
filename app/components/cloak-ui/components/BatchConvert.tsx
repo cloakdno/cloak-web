@@ -4,7 +4,7 @@ import { extractHttpUrls, isValidUrl } from '../utils/shortlink'
 import { FormatTip } from './FormatTip'
 
 interface BatchConvertProps {
-  onConvert: (urls: string[]) => void
+  onConvert: (sourceText: string) => void
 }
 
 export function BatchConvert({ onConvert }: BatchConvertProps) {
@@ -33,16 +33,7 @@ export function BatchConvert({ onConvert }: BatchConvertProps) {
       return
     }
 
-    const validUrls: string[] = []
-    const invalidUrls: string[] = []
-
-    extractedUrls.forEach((url) => {
-      if (isValidUrl(url)) {
-        validUrls.push(url)
-      } else {
-        invalidUrls.push(url)
-      }
-    })
+    const invalidUrls = extractedUrls.filter((url) => !isValidUrl(url))
 
     if (invalidUrls.length > 0) {
       setError(`识别到 ${invalidUrls.length} 条格式异常链接，请检查后重试`)
@@ -50,7 +41,8 @@ export function BatchConvert({ onConvert }: BatchConvertProps) {
     }
 
     setError('')
-    onConvert(validUrls)
+    // 提交用户的完整输入文本，链接提取由后端统一处理。
+    onConvert(text)
     setText('')
     setSuccess(true)
     setTimeout(() => setSuccess(false), 3000)
