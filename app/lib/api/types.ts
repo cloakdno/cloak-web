@@ -310,17 +310,16 @@ export interface ConversionSearchParams extends ConversionPageParams {
 
 /** 转换记录单条数据（对应 response.ConversionRecordItemResponse） */
 export interface ConversionRecordItemResponse {
-  conversion_record_id: number;
+  id: number;
   link_id: number;
-  code: string;
-  short_url: string;
-  original_url: string;
-  response_mode: ResponseMode;
+  batch_text_conversion_id?: number | null;
+  uploaded_file_id?: number | null;
   conversion_type: ConversionType;
   single_link?: SingleLinkConversionDetailResponse;
   batch_text?: BatchTextConversionDetailResponse;
   document_file?: DocumentFileConversionDetailResponse;
   created_at: string;
+  updated_at: string;
 }
 
 /** 分页查询结果（对应 response.ConversionPageResponse） */

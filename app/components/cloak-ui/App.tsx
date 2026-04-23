@@ -11,7 +11,7 @@ import { HistoryTable } from './components/HistoryTable'
 import { EditModal } from './components/EditModal'
 import { LoginPage } from './components/LoginPage'
 import { VisitLogModal } from './components/VisitLogModal'
-import { ShortLink, ProxyMode } from './types/index'
+import { ShortLink, ProxyMode, ConversionGroup } from './types/index'
 import { createShortLink, extractHttpUrls, generateMockVisits } from './utils/shortlink'
 import { 
   createApiClient, 
@@ -19,11 +19,19 @@ import {
   ApiError,
   convertSingleLink,
   submitBatchTextConvert,
+  getBatchTextDetail,
+  submitDocumentFileConvert,
   listConversions,
   searchConversions,
   deleteLink,
+  deleteBatchText,
+  deleteDocumentFile,
   updateLinkOriginalUrl,
   updateLinkResponseMode,
+  updateBatchTextResponseMode,
+  updateDocumentFileResponseMode,
+  BatchTextDetailResponse,
+  downloadDocumentFile,
   mapSingleLinkConvertResponse,
   mapConversionRecordToShortLink,
 } from '@/app/lib/api'
@@ -342,7 +350,12 @@ export function App() {
     }
   }
 
-  const handleFileConvert = (urls: string[]) => {
+  const handleFileConvert = async (file: File, urls: string[]) => {
+    if (!apiClient) {
+      console.error('API client not initialized')
+      return
+    }
+
     const batchId = crypto.randomUUID()
     const newLinks = urls.map((url) => {
       const link = createShortLink(url, 'file', batchId, proxyMode)
@@ -352,23 +365,61 @@ export function App() {
 
     setLinks((prev) => [...newLinks, ...prev])
 
-    setTimeout(() => {
-      setLinks((prev) =>
-        prev.map((l) =>
-          l.batchId === batchId && l.status === 'converting'
-            ? {
-                ...l,
-                status: 'done' as const,
-                visits: generateMockVisits(Math.floor(Math.random() * 10)),
-              }
-            : l,
-        ),
-      )
-    }, 1500)
+    try {
+      await submitDocumentFileConvert(apiClient, file, proxyMode)
+
+      const refreshed = await listConversions(apiClient, { page: 1, size: 100 })
+      const mappedLinks = refreshed.items.map(mapConversionRecordToShortLink)
+      setLinks(mappedLinks)
+
+      if (mappedLinks.some((link) => link.status === 'converting')) {
+        startBatchPolling(apiClient)
+      }
+
+      window.alert(`文件任务已提交：本地预检识别 ${urls.length} 条链接，最终结果以后端任务为准。`)
+    } catch (err) {
+      setLinks((prev) => prev.filter((link) => link.batchId !== batchId))
+
+      let errorMsg = '文件转换失败，请重试'
+      if (err instanceof ApiError) {
+        if (err.status === 401 || err.status === 403) {
+          errorMsg = '认证过期，请重新登录'
+        } else {
+          errorMsg = `${err.message} (${err.code})`
+        }
+      }
+      window.alert(errorMsg)
+      console.error('Document file convert failed:', err)
+    }
   }
 
-  const handleDeleteGroup = (batchId: string) => {
-    setLinks((prev) => prev.filter((link) => link.batchId !== batchId))
+  const handleDeleteGroup = async (batchId: string) => {
+    const groupLinks = links.filter((link) => link.batchId === batchId)
+    const taskLink = groupLinks.find(
+      (link) => link.source !== 'single' && typeof link.taskId === 'number',
+    )
+
+    if (!apiClient || !taskLink || typeof taskLink.taskId !== 'number') {
+      setLinks((prev) => prev.filter((link) => link.batchId !== batchId))
+      return
+    }
+
+    try {
+      if (taskLink.source === 'batch') {
+        await deleteBatchText(apiClient, taskLink.taskId)
+      } else if (taskLink.source === 'file') {
+        await deleteDocumentFile(apiClient, taskLink.taskId)
+      }
+
+      setLinks((prev) => prev.filter((link) => link.batchId !== batchId))
+    } catch (err) {
+      console.error('Failed to delete group:', err)
+      let errorMsg = '删除失败，请重试'
+      if (err instanceof ApiError) {
+        errorMsg = `${err.message} (${err.code})`
+      }
+      window.alert(errorMsg)
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -451,17 +502,41 @@ export function App() {
     if (!apiClient) return
 
     try {
-      // 对所有选中的链接调用更新 API
-      const updatePromises = ids.map((id) => {
-        const linkToUpdate = links.find((l) => l.id === id)
-        if (!linkToUpdate) return null
-        return updateLinkResponseMode(apiClient, linkToUpdate.shortCode, {
-          response_mode: newMode,
-        })
-      })
+      const selectedLinks = ids
+        .map((id) => links.find((link) => link.id === id))
+        .filter((link): link is ShortLink => !!link)
 
-      // 等待所有更新完成
-      await Promise.all(updatePromises.filter(Boolean))
+      const taskLink =
+        selectedLinks.length === 1 &&
+        selectedLinks[0].source !== 'single' &&
+        typeof selectedLinks[0].taskId === 'number'
+          ? selectedLinks[0]
+          : null
+
+      if (taskLink && typeof taskLink.taskId === 'number') {
+        if (taskLink.source === 'batch') {
+          await updateBatchTextResponseMode(apiClient, taskLink.taskId, {
+            response_mode: newMode,
+          })
+        } else {
+          await updateDocumentFileResponseMode(apiClient, taskLink.taskId, {
+            response_mode: newMode,
+          })
+        }
+      } else {
+        // 对所有选中的链接调用更新 API
+        const updatePromises = ids.map((id) => {
+          const linkToUpdate = links.find((link) => link.id === id)
+          if (!linkToUpdate) return null
+
+          return updateLinkResponseMode(apiClient, linkToUpdate.shortCode, {
+            response_mode: newMode,
+          })
+        })
+
+        // 等待所有更新完成
+        await Promise.all(updatePromises.filter(Boolean))
+      }
 
       // 更新本地列表
       setLinks((prev) =>
@@ -482,6 +557,72 @@ export function App() {
       }
       window.alert(errorMsg)
     }
+  }
+
+  const handleDownloadGroup = async (group: ConversionGroup) => {
+    if (!apiClient || group.source !== 'file') {
+      const text = group.links
+        .map((link) => `${link.originalUrl} -> ${link.shortUrl}`)
+        .join('\n')
+      const blob = new Blob([text], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `cloak-${group.source}-${group.batchId.slice(0, 8)}.txt`
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      URL.revokeObjectURL(url)
+      return
+    }
+
+    const taskLink = group.links.find((link) => typeof link.taskId === 'number')
+    if (!taskLink || typeof taskLink.taskId !== 'number') {
+      window.alert('未找到可下载的文件任务')
+      return
+    }
+
+    try {
+      const response = await downloadDocumentFile(apiClient, taskLink.taskId)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = taskLink.fileName || `cloak-document-${taskLink.taskId}.txt`
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Failed to download document file:', err)
+      let errorMsg = '下载失败，请重试'
+      if (err instanceof ApiError) {
+        errorMsg = `${err.message} (${err.code})`
+      }
+      window.alert(errorMsg)
+    }
+  }
+
+  const handleViewBatchDetail = async (taskId: number): Promise<BatchTextDetailResponse> => {
+    if (!apiClient) {
+      throw new Error('API client not initialized')
+    }
+
+    try {
+      return await getBatchTextDetail(apiClient, taskId)
+    } catch (err) {
+      console.error('Failed to load batch detail:', err)
+      if (err instanceof ApiError) {
+        throw new Error(`${err.message} (${err.code})`)
+      }
+      throw new Error('加载批量任务详情失败')
+    }
+  }
+
+  const handleOpenBatchDownload = (taskId: number) => {
+    const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '')
+    const downloadUrl = `${baseUrl}/api/batch-text/${taskId}/download`
+    window.open(downloadUrl, '_blank', 'noopener,noreferrer')
   }
 
   const handleViewLogs = (link: ShortLink) => {
@@ -568,7 +709,12 @@ export function App() {
               <BatchConvert key="batch" onConvert={(sourceText) => setPendingConvert(() => () => handleBatchConvert(sourceText))} />
             )}
             {activeTab === 'file' && (
-              <FileConvert key="file" onConvert={(urls) => setPendingConvert(() => () => handleFileConvert(urls))} />
+              <FileConvert
+                key="file"
+                onConvert={(file, urls) =>
+                  setPendingConvert(() => () => handleFileConvert(file, urls))
+                }
+              />
             )}
           </AnimatePresence>
         </div>
@@ -589,6 +735,9 @@ export function App() {
             onRefresh={handleRefresh}
             onToggleProxyMode={handleToggleProxyMode}
             onSearch={handleSearch}
+            onDownloadGroup={handleDownloadGroup}
+            onViewBatchDetail={handleViewBatchDetail}
+            onOpenBatchDownload={handleOpenBatchDownload}
           />
         </div>
       </main>

@@ -23,10 +23,15 @@ export interface ShortLink {
   shortCode: string
   shortUrl: string
   createdAt: number
+  updatedAt?: number
   source: ConversionSource
   visits: VisitLog[]
   batchId: string
   recognizedLinkCount?: number
+  totalVisitCount?: number
+  taskId?: number
+  convertedText?: string
+  fileName?: string
   status: LinkStatus
   proxyMode: ProxyMode
 }

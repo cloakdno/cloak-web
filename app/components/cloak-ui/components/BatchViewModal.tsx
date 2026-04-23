@@ -1,43 +1,45 @@
 import React, { useState } from 'react'
 import { X, Copy, CheckCircle2, Download, Layers } from 'lucide-react'
 import { ConversionGroup } from '../types'
+import { BatchTextDetailResponse } from '@/app/lib/api'
 
 interface BatchViewModalProps {
   group: ConversionGroup | null
+  detail: BatchTextDetailResponse | null
+  isLoading: boolean
+  errorMessage: string | null
   isOpen: boolean
   onClose: () => void
+  onDownload: () => void
 }
 
 export function BatchViewModal({
   group,
+  detail,
+  isLoading,
+  errorMessage,
   isOpen,
   onClose,
+  onDownload,
 }: BatchViewModalProps) {
   const [copiedAll, setCopiedAll] = useState(false)
   if (!isOpen || !group) return null
 
-  const textContent = group.links
-    .map((l) => `${l.originalUrl} -> ${l.shortUrl}`)
-    .join('\n')
+  const recognizedCount =
+    detail?.recognized_link_count ??
+    group.links.find((link) => typeof link.recognizedLinkCount === 'number')
+      ?.recognizedLinkCount ??
+    group.links.length
+
+  const textContent =
+    detail?.converted_text ||
+    group.links[0]?.convertedText ||
+    group.links.map((l) => `${l.originalUrl} -> ${l.shortUrl}`).join('\n')
 
   const handleCopyAll = () => {
     navigator.clipboard.writeText(textContent)
     setCopiedAll(true)
     setTimeout(() => setCopiedAll(false), 2000)
-  }
-
-  const handleDownload = () => {
-    const blob = new Blob([textContent], {
-      type: 'text/plain',
-    })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `cloak-batch-${group.batchId.slice(0, 8)}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
   }
 
   return (
@@ -48,7 +50,7 @@ export function BatchViewModal({
             <Layers size={20} className="text-orange-500" />
             <h3 className="font-semibold text-gray-800">批量转换详情</h3>
             <span className="text-xs px-2 py-0.5 bg-orange-50 text-orange-500 rounded-full font-medium">
-              {group.links.length} 条链接
+              {recognizedCount} 条链接
             </span>
           </div>
           <button
@@ -73,7 +75,7 @@ export function BatchViewModal({
           </button>
           <button
             onClick={() => {
-              if (window.confirm('确定要下载转换结果文件吗？')) handleDownload()
+              if (window.confirm('确定要下载转换结果文件吗？')) onDownload()
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
@@ -83,11 +85,21 @@ export function BatchViewModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          <textarea
-            readOnly
-            value={textContent}
-            className="w-full h-full min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono text-gray-700 resize-none focus:outline-none"
-          />
+          {isLoading ? (
+            <div className="min-h-[300px] flex items-center justify-center text-sm text-gray-500">
+              正在加载批量转换详情...
+            </div>
+          ) : errorMessage ? (
+            <div className="min-h-[300px] flex items-center justify-center text-sm text-red-500 text-center px-6">
+              {errorMessage}
+            </div>
+          ) : (
+            <textarea
+              readOnly
+              value={textContent}
+              className="w-full h-full min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono text-gray-700 resize-none focus:outline-none"
+            />
+          )}
         </div>
       </div>
     </div>

@@ -25,6 +25,7 @@ import {
 import { ShortLink, ConversionGroup, ProxyMode } from '../types'
 import { formatDate, groupLinksByBatch } from '../utils/shortlink'
 import { BatchViewModal } from './BatchViewModal'
+import { BatchTextDetailResponse } from '@/app/lib/api'
 
 interface HistoryTableProps {
   links: ShortLink[]
@@ -38,6 +39,9 @@ interface HistoryTableProps {
   onRefresh?: () => void
   onToggleProxyMode?: (ids: string[], newMode: ProxyMode) => void
   onSearch?: (keyword: string) => void
+  onDownloadGroup?: (group: ConversionGroup) => void
+  onViewBatchDetail?: (taskId: number) => Promise<BatchTextDetailResponse>
+  onOpenBatchDownload?: (taskId: number) => void
 }
 
 export function HistoryTable({
@@ -50,12 +54,19 @@ export function HistoryTable({
   onRefresh,
   onToggleProxyMode,
   onSearch,
+  onDownloadGroup,
+  onViewBatchDetail,
+  onOpenBatchDownload,
 }: HistoryTableProps) {
   const [searchInput, setSearchInput] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [viewingBatchGroup, setViewingBatchGroup] =
     useState<ConversionGroup | null>(null)
+  const [viewingBatchDetail, setViewingBatchDetail] =
+    useState<BatchTextDetailResponse | null>(null)
+  const [isBatchDetailLoading, setIsBatchDetailLoading] = useState(false)
+  const [batchDetailError, setBatchDetailError] = useState<string | null>(null)
   const [proxyConfirm, setProxyConfirm] = useState<{
     ids: string[]
     currentMode: ProxyMode
@@ -110,7 +121,47 @@ export function HistoryTable({
     URL.revokeObjectURL(url)
   }
 
+  const getGroupTaskId = (group: ConversionGroup) => {
+    return group.links.find((link) => typeof link.taskId === 'number')?.taskId
+  }
+
+  const openBatchGroup = async (group: ConversionGroup) => {
+    setViewingBatchGroup(group)
+    setViewingBatchDetail(null)
+    setBatchDetailError(null)
+
+    const taskId = getGroupTaskId(group)
+    if (typeof taskId !== 'number' || !onViewBatchDetail) {
+      setBatchDetailError('未找到批量任务详情')
+      return
+    }
+
+    setIsBatchDetailLoading(true)
+    try {
+      const detail = await onViewBatchDetail(taskId)
+      setViewingBatchDetail(detail)
+    } catch (error) {
+      setBatchDetailError(
+        error instanceof Error ? error.message : '加载批量任务详情失败',
+      )
+    } finally {
+      setIsBatchDetailLoading(false)
+    }
+  }
+
+  const closeBatchGroup = () => {
+    setViewingBatchGroup(null)
+    setViewingBatchDetail(null)
+    setBatchDetailError(null)
+    setIsBatchDetailLoading(false)
+  }
+
   const getTotalVisits = (group: ConversionGroup) => {
+    const taskTotal = group.links.find(
+      (link) => typeof link.totalVisitCount === 'number',
+    )?.totalVisitCount
+    if (typeof taskTotal === 'number') return taskTotal
+
     const total = group.links.reduce((sum, l) => sum + (l.visits || []).length, 0)
     if (total >= 10000) return `${(total / 10000).toFixed(1).replace(/\.0$/, '')}w`
     if (total >= 1000) return `${(total / 1000).toFixed(1).replace(/\.0$/, '')}k`
@@ -489,7 +540,13 @@ export function HistoryTable({
               {isFile ? (
                 <button
                   onClick={() => {
-                    if (window.confirm('确定要下载转换结果文件吗？')) handleDownloadGroup(group)
+                    if (window.confirm('确定要下载转换结果文件吗？')) {
+                      if (onDownloadGroup) {
+                        onDownloadGroup(group)
+                      } else {
+                        handleDownloadGroup(group)
+                      }
+                    }
                   }}
                   disabled={actionDisabled}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-50"
@@ -500,7 +557,7 @@ export function HistoryTable({
                 </button>
               ) : (
                 <button
-                  onClick={() => setViewingBatchGroup(group)}
+                  onClick={() => void openBatchGroup(group)}
                   disabled={actionDisabled}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-orange-50"
                   title="查看转换结果"
@@ -541,7 +598,13 @@ export function HistoryTable({
                   {isFile ? (
                     <button
                       onClick={() => {
-                        if (window.confirm('确定要下载转换结果文件吗？')) handleDownloadGroup(group)
+                        if (window.confirm('确定要下载转换结果文件吗？')) {
+                          if (onDownloadGroup) {
+                            onDownloadGroup(group)
+                          } else {
+                            handleDownloadGroup(group)
+                          }
+                        }
                         setOpenMenuId(null)
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -552,7 +615,7 @@ export function HistoryTable({
                   ) : (
                     <button
                       onClick={() => {
-                        setViewingBatchGroup(group)
+                        void openBatchGroup(group)
                         setOpenMenuId(null)
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -577,7 +640,7 @@ export function HistoryTable({
                         ids: groupIds,
                         currentMode: groupMode || 'redirect',
                         newMode: groupMode === 'redirect' ? 'proxy' : 'redirect',
-                        count: groupIds.length,
+                        count: groupRecognizedCount,
                       })
                       setOpenMenuId(null)
                     }}
@@ -709,8 +772,23 @@ export function HistoryTable({
 
       <BatchViewModal
         group={viewingBatchGroup}
+        detail={viewingBatchDetail}
+        isLoading={isBatchDetailLoading}
+        errorMessage={batchDetailError}
         isOpen={!!viewingBatchGroup}
-        onClose={() => setViewingBatchGroup(null)}
+        onClose={closeBatchGroup}
+        onDownload={() => {
+          const taskId = viewingBatchGroup ? getGroupTaskId(viewingBatchGroup) : undefined
+          if (typeof taskId !== 'number') {
+            window.alert('未找到批量任务下载地址')
+            return
+          }
+          if (onOpenBatchDownload) {
+            onOpenBatchDownload(taskId)
+            return
+          }
+          window.open(`/api/batch-text/${taskId}/download`, '_blank', 'noopener,noreferrer')
+        }}
       />
 
       {proxyConfirm && (
@@ -897,7 +975,7 @@ export function HistoryTable({
                       <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                         包含链接
                       </span>
-                      <p className="mt-1 text-sm text-gray-800">{viewingDetails.links.length} 条</p>
+                      <p className="mt-1 text-sm text-gray-800">{getGroupRecognizedCount(viewingDetails)} 条</p>
                     </div>
                     <div>
                       <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">

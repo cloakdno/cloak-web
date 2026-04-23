@@ -75,7 +75,58 @@ function resolveBatchId(record: ConversionRecordItemResponse): string {
   if (record.conversion_type === "document_file" && record.document_file?.id) {
     return `document-file-${record.document_file.id}`;
   }
-  return `record-${record.conversion_record_id}`;
+  return `record-${record.id}`;
+}
+
+/**
+ * 统一抽取历史记录在 UI 里需要展示的核心字段。
+ * 最新 conversions 接口对单链和任务型记录采用不同结构：
+ * - single_link：短链信息放在 single_link 详情里
+ * - batch_text / document_file：列表返回任务详情，不再返回逐条短链字段
+ */
+function resolveDisplayFields(record: ConversionRecordItemResponse): {
+  originalUrl: string;
+  shortCode: string;
+  shortUrl: string;
+  proxyMode: ProxyMode;
+  taskId?: number;
+  convertedText?: string;
+  fileName?: string;
+  totalVisitCount?: number;
+} {
+  if (record.conversion_type === "batch_text" && record.batch_text) {
+    return {
+      originalUrl: record.batch_text.source_text || `批量任务 #${record.batch_text.id}`,
+      shortCode: "",
+      shortUrl: "",
+      proxyMode: normalizeProxyMode(record.batch_text.response_mode),
+      taskId: record.batch_text.id,
+      convertedText: record.batch_text.converted_text,
+      totalVisitCount: record.batch_text.total_visit_count,
+    };
+  }
+
+  if (record.conversion_type === "document_file" && record.document_file) {
+    return {
+      originalUrl:
+        record.document_file.uploaded_file?.file_name ||
+        `文件任务 #${record.document_file.id}`,
+      shortCode: "",
+      shortUrl: "",
+      proxyMode: normalizeProxyMode(record.document_file.response_mode),
+      taskId: record.document_file.id,
+      fileName: record.document_file.uploaded_file?.file_name,
+      totalVisitCount: record.document_file.total_visit_count,
+    };
+  }
+
+  return {
+    originalUrl: record.single_link?.original_url || "",
+    shortCode: record.single_link?.code || "",
+    shortUrl: record.single_link?.code ? record.single_link.code : "",
+    proxyMode: normalizeProxyMode(record.single_link?.response_mode),
+    totalVisitCount: record.single_link?.visit_count,
+  };
 }
 
 /**
@@ -115,9 +166,9 @@ export function mapSingleLinkConvertResponse(
  * 将历史转换记录项映射为 UI ShortLink。
  * 
  * 注意：
- * - 后端在列表中使用 conversion_record_id 和 link_id，前端统一为 id（使用 conversion_record_id）
- * - 为了分页/分组，生成伪 batchId（基于时间或 hash），便于后续 groupLinksByBatch 分组
- * - visits 仍为空数组
+ * - 最新 conversions 接口使用 id 作为转换记录主键
+ * - 单链记录的短链信息位于 single_link；批量/文件记录仅返回任务级详情
+ * - batchId 统一由任务 ID 或记录 ID 派生，供前端表格分组使用
  * 
  * @param apiResp API 历史记录项
  * @returns 前端 ShortLink
@@ -128,22 +179,28 @@ export function mapConversionRecordToShortLink(
   const source = normalizeSource(apiResp);
   const status = normalizeStatus(apiResp);
   const batchId = resolveBatchId(apiResp);
+  const displayFields = resolveDisplayFields(apiResp);
   const recognizedLinkCount =
     apiResp.batch_text?.recognized_link_count ??
     apiResp.document_file?.recognized_link_count;
 
   return {
-    id: String(apiResp.conversion_record_id),
-    originalUrl: apiResp.original_url,
-    shortCode: apiResp.code,
-    shortUrl: apiResp.short_url,
+    id: String(apiResp.id),
+    originalUrl: displayFields.originalUrl,
+    shortCode: displayFields.shortCode,
+    shortUrl: displayFields.shortUrl,
     createdAt: parseTimestamp(apiResp.created_at),
+    updatedAt: parseTimestamp(apiResp.updated_at),
     source,
     visits: [],
     batchId,
     recognizedLinkCount,
+    totalVisitCount: displayFields.totalVisitCount,
+    taskId: displayFields.taskId,
+    convertedText: displayFields.convertedText,
+    fileName: displayFields.fileName,
     status,
-    proxyMode: normalizeProxyMode(apiResp.response_mode),
+    proxyMode: displayFields.proxyMode,
   };
 }
 

@@ -4,7 +4,7 @@ import { extractHttpUrls, isValidUrl } from '../utils/shortlink'
 import { FormatTip } from './FormatTip'
 
 interface FileConvertProps {
-  onConvert: (urls: string[]) => void
+  onConvert: (file: File, urls: string[]) => void
 }
 
 export function FileConvert({ onConvert }: FileConvertProps) {
@@ -97,7 +97,7 @@ export function FileConvert({ onConvert }: FileConvertProps) {
         return
       }
 
-      onConvert(validUrls)
+      onConvert(file, validUrls)
       setIsProcessing(false)
       clearFile()
     }

@@ -190,12 +190,10 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
 {
   "items": [
     {
-      "conversion_record_id": 101,
+      "id": 101,
       "link_id": 201,
-      "code": "single01",
-      "short_url": "http://localhost:9000/single01",
-      "original_url": "https://single.example.com",
-      "response_mode": "redirect",
+      "batch_text_conversion_id": null,
+      "uploaded_file_id": null,
       "conversion_type": "single_link",
       "single_link": {
         "id": 201,
@@ -206,15 +204,14 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
         "created_at": "2026-04-24T14:30:00Z",
         "updated_at": "2026-04-24T14:30:00Z"
       },
-      "created_at": "2026-04-24 14:30:00"
+      "created_at": "2026-04-24T14:30:00Z",
+      "updated_at": "2026-04-24T14:30:00Z"
     },
     {
-      "conversion_record_id": 102,
+      "id": 102,
       "link_id": 202,
-      "code": "batch001",
-      "short_url": "http://localhost:9000/batch001",
-      "original_url": "https://batch.example.com",
-      "response_mode": "redirect",
+      "batch_text_conversion_id": 12,
+      "uploaded_file_id": null,
       "conversion_type": "batch_text",
       "batch_text": {
         "id": 12,
@@ -228,15 +225,14 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
         "updated_at": "2026-04-24T14:31:00Z",
         "download_url": "http://localhost:9000/api/batch-text/12/download"
       },
-      "created_at": "2026-04-24 14:31:00"
+      "created_at": "2026-04-24T14:31:00Z",
+      "updated_at": "2026-04-24T14:31:00Z"
     },
     {
-      "conversion_record_id": 103,
+      "id": 103,
       "link_id": 203,
-      "code": "doc00001",
-      "short_url": "http://localhost:9000/doc00001",
-      "original_url": "https://doc.example.com",
-      "response_mode": "redirect",
+      "batch_text_conversion_id": null,
+      "uploaded_file_id": 30,
       "conversion_type": "document_file",
       "document_file": {
         "id": 20,
@@ -259,7 +255,8 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
           "updated_at": "2026-04-24T14:20:00Z"
         }
       },
-      "created_at": "2026-04-24 14:32:00"
+      "created_at": "2026-04-24T14:32:00Z",
+      "updated_at": "2026-04-24T14:32:00Z"
     }
   ],
   "page": 1,
@@ -276,6 +273,9 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
 
 - 批量文本任务提交接口 `POST /api/batch-text/batch`：每个任务仅写入 1 条 `conversion_records` 记录。
 - 转换列表接口 `GET /api/conversions` 与 `GET /api/conversions/search`：
+  - 列表项根对象是 `conversion_records` 的扁平字段：`id`、`link_id`、`batch_text_conversion_id`、`uploaded_file_id`、`created_at`、`updated_at`。
+  - `single_link.created_at`、`single_link.updated_at`、`single_link.visit_count` 与数据库 `links` 保持一致。
+  - `items.created_at`、`items.updated_at` 表示 `conversion_records` 记录时间，不等同于 `single_link` 内的时间字段。
   - `batch_text.created_at`、`batch_text.updated_at`、`batch_text.total_visit_count`、`batch_text.recognized_link_count`、`batch_text.status`、`batch_text.response_mode` 与数据库 `batch_text_conversions` 保持一致。
   - `batch_text.source_text` 固定返回空字符串 `""`。
   - `batch_text.converted_text` 固定返回空字符串 `""`。
@@ -285,8 +285,8 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
 
 - 旧：`batch_text.conversion_id`
 - 新：`batch_text.id`
-- 旧：`single_link.conversion_record_id`
-- 新：`single_link.id`（对应 `links.id`）
+- 旧：`items.conversion_record_id`
+- 新：`items.id`（对应 `conversion_records.id`）
 
 ## 5. 统一错误响应格式
 
@@ -417,7 +417,7 @@ go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs --parseDep
 - `batch_text` 字段读取策略：`source_text` 与 `converted_text` 固定为空字符串，不要依赖该接口返回大文本内容。
 - 若用户需要查看批量文本原文与转换结果，请跳转任务详情接口 `GET /api/batch-text/{id}` 或下载接口 `GET /api/batch-text/{id}/download`。
 - 批量任务在 `conversion_records` 中仅有一条聚合记录，列表中不再按每个识别链接展开多条批量记录。
-- 字段兼容迁移：`batch_text.conversion_id` 改为 `batch_text.id`，`single_link.conversion_record_id` 改为 `single_link.id`。
+- 字段兼容迁移：`batch_text.conversion_id` 改为 `batch_text.id`，`items.conversion_record_id` 改为 `items.id`。
 - 列表页建议缓存 `code`、`conversion_type`、`batch_text.id`、`batch_text.total_visit_count`、`batch_text.updated_at` 等轻量字段，避免缓存详情大文本。
 
 ### 8.7 鉴权请求头示例

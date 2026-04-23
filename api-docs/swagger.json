@@ -314,7 +314,7 @@
                         "BasicAuth": []
                     }
                 ],
-                "description": "按页码和页大小分页查询历史转换记录。",
+                "description": "按页码和页大小分页查询历史转换记录。列表项根对象字段 id/link_id/batch_text_conversion_id/uploaded_file_id/created_at/updated_at 对应 conversion_records；single_link.created_at/updated_at/visit_count 对应 links。",
                 "produces": [
                     "application/json"
                 ],
@@ -371,7 +371,7 @@
                         "BasicAuth": []
                     }
                 ],
-                "description": "根据关键字搜索短链或原始链接，并分页返回结果。",
+                "description": "根据关键字搜索短链或原始链接，并分页返回结果。字段语义与 /api/conversions 一致：列表项根对象时间字段来自 conversion_records，single_link 时间与访问次数来自 links。",
                 "produces": [
                     "application/json"
                 ],
@@ -1645,35 +1645,38 @@
                 "batch_text": {
                     "$ref": "#/definitions/response.BatchTextConversionDetailResponse"
                 },
-                "code": {
-                    "type": "string"
-                },
-                "conversion_record_id": {
+                "batch_text_conversion_id": {
+                    "description": "BatchTextConversionID 为关联的批量转换表记录 ID，可为空。",
                     "type": "integer"
                 },
                 "conversion_type": {
                     "type": "string"
                 },
                 "created_at": {
+                    "description": "CreatedAt 为创建时间。",
                     "type": "string"
                 },
                 "document_file": {
                     "$ref": "#/definitions/response.DocumentFileConversionDetailResponse"
                 },
-                "link_id": {
+                "id": {
+                    "description": "ID 为主键 ID。",
                     "type": "integer"
                 },
-                "original_url": {
-                    "type": "string"
-                },
-                "response_mode": {
-                    "type": "string"
-                },
-                "short_url": {
-                    "type": "string"
+                "link_id": {
+                    "description": "LinkID 为关联的单链接转换记录 ID。",
+                    "type": "integer"
                 },
                 "single_link": {
                     "$ref": "#/definitions/response.SingleLinkConversionDetailResponse"
+                },
+                "updated_at": {
+                    "description": "UpdatedAt 为更新时间。",
+                    "type": "string"
+                },
+                "uploaded_file_id": {
+                    "description": "UploadedFileID 为关联的文档文件上传表记录 ID，可为空。",
+                    "type": "integer"
                 }
             }
         },
