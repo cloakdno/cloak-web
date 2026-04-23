@@ -29,6 +29,7 @@ export interface ShortLink {
   batchId: string
   recognizedLinkCount?: number
   totalVisitCount?: number
+  downloadUrl?: string
   taskId?: number
   convertedText?: string
   fileName?: string

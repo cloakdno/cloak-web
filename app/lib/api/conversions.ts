@@ -18,6 +18,8 @@ import type {
 /**
  * 分页查询历史转换记录。
  * 按创建时间倒序返回，支持 page/size 分页参数。
+ * 每条记录仅表示一种来源（single_link / batch_text / document_file），
+ * 对应详情在同名字段中返回。
  * 不传分页参数时使用服务端默认值（通常 page=1, size=20）。
  *
  * @param params 可选的分页参数 { page, size }
@@ -35,7 +37,8 @@ export async function listConversions(
 
 /**
  * 按关键词搜索转换记录。
- * 关键词匹配原始链接或短链 URL，支持分页。
+ * 关键词匹配范围由服务端定义，包含单链接、批量任务关联链接、文件任务关联链接及文件名等。
+ * 支持分页。
  * keyword 为空时与 listConversions 行为相同。
  *
  * @param params 搜索参数 { keyword, page, size }

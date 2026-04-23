@@ -202,6 +202,8 @@ export interface BatchTextDetailResponse {
   total_visit_count: number;
   response_mode: ResponseMode;
   status: ConversionStatus;
+  /** 优化后的 API 契约补充：下载结果文件地址 */
+  download_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -311,9 +313,10 @@ export interface ConversionSearchParams extends ConversionPageParams {
 /** 转换记录单条数据（对应 response.ConversionRecordItemResponse） */
 export interface ConversionRecordItemResponse {
   id: number;
-  link_id: number;
-  batch_text_conversion_id?: number | null;
-  uploaded_file_id?: number | null;
+  /** 三者必须且只能有一个有值，其他为 null */
+  link_id: number | null;
+  batch_text_conversion_id: number | null;
+  uploaded_file_id: number | null;
   conversion_type: ConversionType;
   single_link?: SingleLinkConversionDetailResponse;
   batch_text?: BatchTextConversionDetailResponse;

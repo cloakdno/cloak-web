@@ -36,6 +36,13 @@ export function BatchViewModal({
     group.links[0]?.convertedText ||
     group.links.map((l) => `${l.originalUrl} -> ${l.shortUrl}`).join('\n')
 
+  const maxDisplayLines = 20
+  const allLines = textContent.split(/\r?\n/)
+  const displayTextContent =
+    allLines.length > maxDisplayLines
+      ? `${allLines.slice(0, maxDisplayLines).join('\n')}\n...`
+      : textContent
+
   const handleCopyAll = () => {
     navigator.clipboard.writeText(textContent)
     setCopiedAll(true)
@@ -96,7 +103,7 @@ export function BatchViewModal({
           ) : (
             <textarea
               readOnly
-              value={textContent}
+              value={displayTextContent}
               className="w-full h-full min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono text-gray-700 resize-none focus:outline-none"
             />
           )}

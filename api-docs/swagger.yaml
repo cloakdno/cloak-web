@@ -241,7 +241,7 @@ definitions:
       batch_text:
         $ref: '#/definitions/response.BatchTextConversionDetailResponse'
       batch_text_conversion_id:
-        description: BatchTextConversionID 为关联的批量转换表记录 ID，可为空。
+        description: BatchTextConversionID 为关联的批量转换表记录 ID，可为空。link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值。
         type: integer
       conversion_type:
         type: string
@@ -254,7 +254,7 @@ definitions:
         description: ID 为主键 ID。
         type: integer
       link_id:
-        description: LinkID 为关联的单链接转换记录 ID。
+        description: LinkID 为关联的单链接转换记录 ID，可为空。link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值。
         type: integer
       single_link:
         $ref: '#/definitions/response.SingleLinkConversionDetailResponse'
@@ -262,7 +262,7 @@ definitions:
         description: UpdatedAt 为更新时间。
         type: string
       uploaded_file_id:
-        description: UploadedFileID 为关联的文档文件上传表记录 ID，可为空。
+        description: UploadedFileID 为关联的文档文件上传表记录 ID，可为空。link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值。
         type: integer
     type: object
   response.DocumentFileConversionDetailResponse:
@@ -701,8 +701,7 @@ paths:
       - batch-text
   /api/conversions:
     get:
-      description: 按页码和页大小分页查询历史转换记录。列表项根对象字段 id/link_id/batch_text_conversion_id/uploaded_file_id/created_at/updated_at
-        对应 conversion_records；single_link.created_at/updated_at/visit_count 对应 links。
+      description: 按页码和页大小分页查询历史转换记录。列表项根对象字段 id/link_id/batch_text_conversion_id/uploaded_file_id/created_at/updated_at 对应 conversion_records。link_id 允许为空，且 link_id、batch_text_conversion_id、uploaded_file_id 三者必须且只能有一个有值；single_link 详情仅在 conversion_type=single_link 时返回。
       parameters:
       - description: 页码（从 1 开始）
         in: query
@@ -738,8 +737,7 @@ paths:
       - conversions
   /api/conversions/search:
     get:
-      description: 根据关键字搜索短链或原始链接，并分页返回结果。字段语义与 /api/conversions 一致：列表项根对象时间字段来自 conversion_records，single_link
-        时间与访问次数来自 links。
+      description: 根据关键字搜索转换记录，并分页返回结果。搜索范围包含单链接详情、批量文本任务关联短链、文档文件任务关联短链以及文档源文件名。字段语义与 /api/conversions 一致。
       parameters:
       - description: 搜索关键词
         in: query

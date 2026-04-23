@@ -87,8 +87,10 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
 
 - GET /api/conversions（鉴权：是）
   - 功能：分页查询转换记录（返回 single_link / batch_text / document_file 三类详情）
+  - 说明：每条 conversion_records 记录只表示一种转换来源，`link_id`、`batch_text_conversion_id`、`uploaded_file_id` 三者必须且只能有一个有值
 - GET /api/conversions/search（鉴权：是）
   - 功能：按关键词分页搜索转换记录（返回结构与 /api/conversions 一致）
+  - 说明：搜索范围包含单链接详情、批量文本任务关联短链、文档文件任务关联短链以及文档源文件名
 
 ## 4. 请求与响应示例
 
@@ -184,6 +186,11 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
 
 请求：GET /api/conversions?page=1&size=20
 
+说明：
+
+- `link_id`、`batch_text_conversion_id`、`uploaded_file_id` 三个字段在每条记录中必须且只能有一个有值
+- 根对象只表达 conversion_records 的来源索引；具体详情放在 `single_link`、`batch_text`、`document_file` 中
+
 成功响应（示例）：
 
 ```json
@@ -209,7 +216,7 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
     },
     {
       "id": 102,
-      "link_id": 202,
+      "link_id": null,
       "batch_text_conversion_id": 12,
       "uploaded_file_id": null,
       "conversion_type": "batch_text",
@@ -230,7 +237,7 @@ Swagger 页面中点击 `Authorize`，按如下格式填写：
     },
     {
       "id": 103,
-      "link_id": 203,
+      "link_id": null,
       "batch_text_conversion_id": null,
       "uploaded_file_id": 30,
       "conversion_type": "document_file",

@@ -23,7 +23,6 @@ import {
   X,
 } from 'lucide-react'
 import { ShortLink, ConversionGroup, ProxyMode } from '../types'
-import { groupLinksByBatch } from '../utils/shortlink'
 import { BatchViewModal } from './BatchViewModal'
 import { BatchTextDetailResponse } from '@/app/lib/api'
 import toast from 'react-hot-toast'
@@ -101,12 +100,12 @@ export function HistoryTable({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const itemsPerPage = 10
+  const itemsPerPage = 20
   // 搜索已在服务端处理，links 本身就是搜索结果或全部列表，无需本地过滤
   const filteredLinks = links
-  const groups = groupLinksByBatch(filteredLinks)
-  const totalPages = Math.ceil(groups.length / itemsPerPage)
-  const paginatedGroups = groups.slice(
+  const sortedLinks = [...filteredLinks].sort((a, b) => b.createdAt - a.createdAt)
+  const totalPages = Math.ceil(sortedLinks.length / itemsPerPage)
+  const paginatedLinks = sortedLinks.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   )
@@ -479,14 +478,15 @@ export function HistoryTable({
     const isFile = group.source === 'file'
     const converting = isGroupConverting(group)
     const actionDisabled = converting
+    const rowKey = group.links[0]?.id || group.batchId
     const groupIds = group.links.map((l) => l.id)
     const groupMode = group.links[0]?.proxyMode
     const groupRecognizedCount = getGroupRecognizedCount(group)
-    const isMenuOpen = openMenuId === group.batchId
+    const isMenuOpen = openMenuId === rowKey
 
     return (
       <tr
-        key={group.batchId}
+        key={rowKey}
         className={`group border-b border-gray-50 hover:bg-gray-50/50 transition-colors ${converting ? 'bg-purple-50/30' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}`}
       >
         <td className="p-4">
@@ -598,7 +598,7 @@ export function HistoryTable({
                 onClick={(e) => {
                   e.stopPropagation()
                   if (actionDisabled) return
-                  setOpenMenuId(isMenuOpen ? null : group.batchId)
+                  setOpenMenuId(isMenuOpen ? null : rowKey)
                 }}
                 disabled={actionDisabled}
                 className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
@@ -750,10 +750,18 @@ export function HistoryTable({
               </tr>
             </thead>
             <tbody>
-              {paginatedGroups.map((group, idx) =>
-                group.source === 'single'
-                  ? renderSingleRow(group.links[0], idx)
-                  : renderGroupRow(group, idx),
+              {paginatedLinks.map((link, idx) =>
+                link.source === 'single'
+                  ? renderSingleRow(link, idx)
+                  : renderGroupRow(
+                      {
+                        batchId: link.batchId,
+                        source: link.source,
+                        links: [link],
+                        createdAt: link.createdAt,
+                      },
+                      idx,
+                    ),
               )}
             </tbody>
           </table>
@@ -763,7 +771,7 @@ export function HistoryTable({
           <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
             <span className="text-sm text-gray-500">
               显示第 {(currentPage - 1) * itemsPerPage + 1} 至{' '}
-              {Math.min(currentPage * itemsPerPage, groups.length)} 条，共 {groups.length} 条
+              {Math.min(currentPage * itemsPerPage, sortedLinks.length)} 条，共 {sortedLinks.length} 条
             </span>
             <div className="flex gap-1">
               <button
@@ -793,6 +801,14 @@ export function HistoryTable({
         isOpen={!!viewingBatchGroup}
         onClose={closeBatchGroup}
         onDownload={() => {
+          const downloadUrl = viewingBatchGroup?.links.find(
+            (link) => typeof link.downloadUrl === 'string' && link.downloadUrl.length > 0,
+          )?.downloadUrl
+          if (downloadUrl) {
+            window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+            return
+          }
+
           const taskId = viewingBatchGroup ? getGroupTaskId(viewingBatchGroup) : undefined
           if (typeof taskId !== 'number') {
             toast.error('未找到批量任务下载地址')

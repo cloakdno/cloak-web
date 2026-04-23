@@ -95,7 +95,7 @@ export function App() {
       try {
         batchPollingAttemptsRef.current += 1
 
-        const response = await listConversions(client, { page: 1, size: 100 })
+        const response = await listConversions(client, { page: 1, size: 20 })
         const mappedLinks = response.items.map(mapConversionRecordToShortLink)
         setLinks(mappedLinks)
 
@@ -270,7 +270,7 @@ export function App() {
     // 异步加载服务端历史
     const loadHistoryFromServer = async () => {
       try {
-        const response = await listConversions(apiClient, { page: 1, size: 100 })
+        const response = await listConversions(apiClient, { page: 1, size: 20 })
         const mappedLinks = response.items.map(mapConversionRecordToShortLink)
         setLinks(mappedLinks)
       } catch (err) {
@@ -451,7 +451,7 @@ export function App() {
       })
 
       // 提交成功后以服务端历史为准刷新列表，避免继续依赖旧接口的逐条返回结构。
-      const refreshed = await listConversions(apiClient, { page: 1, size: 100 })
+      const refreshed = await listConversions(apiClient, { page: 1, size: 20 })
       const mappedLinks = refreshed.items.map(mapConversionRecordToShortLink)
       setLinks(mappedLinks)
 
@@ -498,7 +498,7 @@ export function App() {
     try {
       await submitDocumentFileConvert(apiClient, file, proxyMode)
 
-      const refreshed = await listConversions(apiClient, { page: 1, size: 100 })
+      const refreshed = await listConversions(apiClient, { page: 1, size: 20 })
       const mappedLinks = refreshed.items.map(mapConversionRecordToShortLink)
       setLinks(mappedLinks)
 
@@ -764,7 +764,7 @@ export function App() {
     if (!apiClient) return
 
     try {
-      const response = await listConversions(apiClient, { page: 1, size: 100 })
+      const response = await listConversions(apiClient, { page: 1, size: 20 })
       const mappedLinks = response.items.map(mapConversionRecordToShortLink)
       setLinks(mappedLinks)
     } catch (err) {
@@ -780,7 +780,7 @@ export function App() {
     try {
       if (!keyword || keyword.trim().length === 0) {
         // 关键词为空时，重新加载全部记录
-        const response = await listConversions(apiClient, { page: 1, size: 100 })
+        const response = await listConversions(apiClient, { page: 1, size: 20 })
         const mappedLinks = response.items.map(mapConversionRecordToShortLink)
         setLinks(mappedLinks)
       } else {

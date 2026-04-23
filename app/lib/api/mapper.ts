@@ -93,6 +93,7 @@ function resolveDisplayFields(record: ConversionRecordItemResponse): {
   convertedText?: string;
   fileName?: string;
   totalVisitCount?: number;
+  downloadUrl?: string;
 } {
   if (record.conversion_type === "batch_text" && record.batch_text) {
     return {
@@ -103,6 +104,7 @@ function resolveDisplayFields(record: ConversionRecordItemResponse): {
       taskId: record.batch_text.id,
       convertedText: record.batch_text.converted_text,
       totalVisitCount: record.batch_text.total_visit_count,
+      downloadUrl: record.batch_text.download_url,
     };
   }
 
@@ -117,6 +119,7 @@ function resolveDisplayFields(record: ConversionRecordItemResponse): {
       taskId: record.document_file.id,
       fileName: record.document_file.uploaded_file?.file_name,
       totalVisitCount: record.document_file.total_visit_count,
+      downloadUrl: record.document_file.download_url,
     };
   }
 
@@ -196,6 +199,7 @@ export function mapConversionRecordToShortLink(
     batchId,
     recognizedLinkCount,
     totalVisitCount: displayFields.totalVisitCount,
+    downloadUrl: displayFields.downloadUrl,
     taskId: displayFields.taskId,
     convertedText: displayFields.convertedText,
     fileName: displayFields.fileName,
