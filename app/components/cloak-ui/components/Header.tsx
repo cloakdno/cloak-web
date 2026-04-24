@@ -182,14 +182,6 @@ export function Header({
             </div>
 
             <div className="p-6">
-              <div className="flex items-center gap-2 mb-5 px-4 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
-                <Clock size={15} className="text-gray-400 shrink-0" />
-                <span className="text-sm text-gray-600">当前到期时间：</span>
-                <span className="text-sm font-semibold text-gray-800">
-                  {expiryLabel.replace('到期时间：', '')}
-                </span>
-              </div>
-
               <div className="space-y-4 mb-6">
                 <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl border border-purple-100">
                   <div>

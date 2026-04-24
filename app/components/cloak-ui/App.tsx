@@ -40,7 +40,7 @@ import {
   mapSingleLinkConvertResponse,
   mapConversionRecordToShortLink,
 } from '@/app/lib/api'
-import { Send, ArrowRightLeft, Globe } from 'lucide-react'
+import { Send, ArrowRightLeft, Globe, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 type Tab = 'single' | 'batch' | 'file'
@@ -53,6 +53,7 @@ interface PendingConvertAction {
 const STORAGE_KEY = 'cloak-links-history'
 /** localStorage key，值为 JSON 序列化的 { username: string; password: string } */
 const AUTH_KEY = 'cloak-auth-user'
+const PROXY_MODE_KEY = 'cloak-proxy-mode'
 const BATCH_POLL_INTERVAL_MS = 3000
 const BATCH_POLL_MAX_ATTEMPTS = 40
 
@@ -120,7 +121,7 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    // 从 localStorage 恢复登录凭证（JSON 格式：{ username, password }）
+    // 从 localStorage 恢复登录凭证与代理模式，避免刷新后丢失用户偏好。
     try {
       const raw = localStorage.getItem(AUTH_KEY)
       if (raw) {
@@ -131,6 +132,11 @@ export function App() {
           setApiClient(createApiClient(u, p))
         }
       }
+
+      const storedProxyMode = localStorage.getItem(PROXY_MODE_KEY)
+      if (storedProxyMode === 'redirect' || storedProxyMode === 'proxy') {
+        setProxyMode(storedProxyMode)
+      }
     } catch {
       // 旧格式或损坏数据，忽略并清除
       localStorage.removeItem(AUTH_KEY)
@@ -138,6 +144,11 @@ export function App() {
       setAuthHydrated(true)
     }
   }, [])
+
+  useEffect(() => {
+    if (!authHydrated) return
+    localStorage.setItem(PROXY_MODE_KEY, proxyMode)
+  }, [authHydrated, proxyMode])
 
   useEffect(() => {
     // 仅在未登录（无 apiClient）时加载演示数据，已登录用户的历史由服务端加载
@@ -799,6 +810,17 @@ export function App() {
       console.error('Failed to search links:', err)
       toast.error('搜索失败，请重试')
     }
+  }
+
+  if (!authHydrated) {
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center px-4">
+        <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-5 py-4 text-white backdrop-blur-sm">
+          <Loader2 size={20} className="animate-spin" />
+          <span className="text-sm font-medium">正在恢复登录状态...</span>
+        </div>
+      </div>
+    )
   }
 
   if (!user) {

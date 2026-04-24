@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import {
   VenetianMask,
   Server,
@@ -24,22 +25,20 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showForgotModal, setShowForgotModal] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!username.trim()) {
-      setError('请输入用户名')
+      toast.error('请输入用户名')
       return
     }
     if (!password.trim()) {
-      setError('请输入密码')
+      toast.error('请输入密码')
       return
     }
 
-    setError('')
     setIsLoading(true)
     try {
       // 通过 BasicAuth 调用 GET /api/user/profile 验证凭证是否有效
@@ -50,14 +49,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          setError('用户名或密码错误')
+          toast.error('用户名或密码错误')
         } else if (err.status === 403) {
-          setError('账户已被禁用或服务已过期')
+          toast.error('账户已被禁用或服务已过期')
         } else {
-          setError(`登录失败：${err.message}`)
+          toast.error(`登录失败：${err.message}`)
         }
       } else {
-        setError('网络异常，请检查连接后重试')
+        toast.error('网络异常，请检查连接后重试')
       }
     } finally {
       setIsLoading(false)
@@ -118,10 +117,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 <input
                   type="text"
                   value={username}
-                  onChange={(e) => {
-                    setUsername(e.target.value)
-                    if (error) setError('')
-                  }}
+                  onChange={(e) => setUsername(e.target.value)}
                   placeholder="请输入用户名"
                   disabled={isLoading}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
@@ -134,10 +130,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value)
-                      if (error) setError('')
-                    }}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="请输入密码"
                     disabled={isLoading}
                     className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
@@ -152,8 +145,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   </button>
                 </div>
               </div>
-
-              {error && <p className="text-red-500 text-sm">{error}</p>}
 
               <button
                 type="submit"
