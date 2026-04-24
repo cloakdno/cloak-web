@@ -11,7 +11,7 @@ import { HistoryTable } from './components/HistoryTable'
 import { EditModal } from './components/EditModal'
 import { LoginPage } from './components/LoginPage'
 import { ShortLink, ProxyMode, ConversionGroup } from './types/index'
-import { createShortLink, extractHttpUrls, generateMockVisits } from './utils/shortlink'
+import { createShortLink, extractHttpUrls, generateMockVisits, isCompliantHttpUrl } from './utils/shortlink'
 import { 
   createApiClient, 
   ApiClient, 
@@ -74,7 +74,7 @@ export function App() {
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('single')
-  const [proxyMode, setProxyMode] = useState<ProxyMode>('redirect')
+  const [proxyMode, setProxyMode] = useState<ProxyMode>('proxy')
   const [links, setLinks] = useState<ShortLink[]>([])
   const [editingLink, setEditingLink] = useState<ShortLink | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -398,6 +398,11 @@ export function App() {
     // 若未登录或无 API 客户端，不处理
     if (!apiClient) {
       console.error('API client not initialized')
+      return
+    }
+
+    if (!isCompliantHttpUrl(url)) {
+      toast.error('请输入合规的 http/https 链接')
       return
     }
 
@@ -986,24 +991,44 @@ export function App() {
                   <p className="text-sm text-gray-500">请确认当前响应模式</p>
                 </div>
               </div>
-              <div
-                className={`rounded-xl p-4 mb-5 ${proxyMode === 'redirect' ? 'bg-purple-50 border border-purple-100' : 'bg-violet-50 border border-violet-100'}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  {proxyMode === 'redirect' ? (
-                    <ArrowRightLeft size={14} className="text-purple-600" />
-                  ) : (
-                    <Globe size={14} className="text-violet-600" />
-                  )}
-                  <span className={`text-sm font-semibold ${proxyMode === 'redirect' ? 'text-purple-700' : 'text-violet-700'}`}>
-                    {proxyMode === 'redirect' ? '跳转模式' : '代理模式'}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  {proxyMode === 'redirect'
-                    ? '访问短链时将直接 302 跳转到目标地址'
-                    : '服务器获取目标内容后返回，隐藏真实地址'}
-                </p>
+              <div className="mb-5 grid grid-cols-1 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setProxyMode('redirect')}
+                  className={`rounded-xl border p-4 text-left transition-all ${proxyMode === 'redirect' ? 'bg-purple-50 border-purple-300 ring-2 ring-purple-100 shadow-sm' : 'bg-gray-50 border-gray-200 hover:border-purple-200 hover:bg-purple-50/40'}`}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="p-2 rounded-lg bg-white/80">
+                        <ArrowRightLeft size={16} className="text-purple-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900">跳转模式</span>
+                    </div>
+                    <span className={`h-4 w-4 rounded-full border-2 ${proxyMode === 'redirect' ? 'border-purple-500 bg-purple-500 shadow-[inset_0_0_0_3px_white]' : 'border-gray-300 bg-white'}`} />
+                  </div>
+                  <p className="text-xs leading-5 text-gray-500">
+                    访问短链时将直接 302 跳转到目标地址
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setProxyMode('proxy')}
+                  className={`rounded-xl border p-4 text-left transition-all ${proxyMode === 'proxy' ? 'bg-violet-50 border-violet-300 ring-2 ring-violet-100 shadow-sm' : 'bg-gray-50 border-gray-200 hover:border-violet-200 hover:bg-violet-50/40'}`}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="p-2 rounded-lg bg-white/80">
+                        <Globe size={16} className="text-violet-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900">代理模式</span>
+                    </div>
+                    <span className={`h-4 w-4 rounded-full border-2 ${proxyMode === 'proxy' ? 'border-violet-500 bg-violet-500 shadow-[inset_0_0_0_3px_white]' : 'border-gray-300 bg-white'}`} />
+                  </div>
+                  <p className="text-xs leading-5 text-gray-500">
+                    服务器获取目标内容后返回，隐藏真实地址
+                  </p>
+                </button>
               </div>
               <div className="flex gap-3">
                 <button

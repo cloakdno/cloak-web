@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { ArrowRight, Link as LinkIcon } from 'lucide-react'
-import { isValidUrl } from '../utils/shortlink'
+import { isCompliantHttpUrl } from '../utils/shortlink'
 
 interface SingleConvertProps {
   onConvert: (url: string, options?: { onConfirm?: () => void }) => void
@@ -22,8 +22,8 @@ export function SingleConvert({ onConvert }: SingleConvertProps) {
       finalUrl = `https://${finalUrl}`
     }
 
-    if (!isValidUrl(finalUrl)) {
-      setError('请输入有效的链接')
+    if (!isCompliantHttpUrl(finalUrl)) {
+      setError('请输入合规的 http/https 链接')
       return
     }
 

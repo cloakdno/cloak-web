@@ -131,6 +131,40 @@ export const isValidUrl = (string: string) => {
   }
 }
 
+const isIpv4Host = (hostname: string) => {
+  return /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/.test(
+    hostname,
+  )
+}
+
+/**
+ * 更严格的单链接校验：
+ * - 必须能被 URL 正常解析
+ * - 仅允许 http/https
+ * - 主机名需为常规域名、localhost 或 IP，避免把任意字符串补成 https://abc 后误判为合法
+ */
+export const isCompliantHttpUrl = (value: string) => {
+  try {
+    const parsed = new URL(value)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false
+    }
+
+    const hostname = parsed.hostname.trim().toLowerCase()
+    if (!hostname) {
+      return false
+    }
+
+    if (hostname === 'localhost' || hostname.includes('.') || isIpv4Host(hostname)) {
+      return true
+    }
+
+    return hostname.includes(':')
+  } catch {
+    return false
+  }
+}
+
 const trimTrailingPunctuation = (url: string) => {
   return url.replace(/[\),.;!?\]\}，。；！？）】》]+$/g, '')
 }
