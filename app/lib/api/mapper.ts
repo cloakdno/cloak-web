@@ -42,6 +42,26 @@ function normalizeProxyMode(mode: string | undefined): ProxyMode {
 }
 
 /**
+ * conversions 历史接口的 single_link 仅返回 code，这里统一补成可访问/可复制的完整短链地址。
+ */
+function buildShortUrlFromCode(code: string | undefined): string {
+  if (!code) return "";
+
+  const normalizedCode = code.replace(/^\/+/, "");
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/+$/, "");
+
+  if (configuredBaseUrl) {
+    return `${configuredBaseUrl}/${normalizedCode}`;
+  }
+
+  if (typeof window !== "undefined" && window.location.origin) {
+    return `${window.location.origin}/${normalizedCode}`;
+  }
+
+  return normalizedCode;
+}
+
+/**
  * 将后端 conversion_type 映射到前端来源标签。
  */
 function normalizeSource(record: ConversionRecordItemResponse): UiSource {
@@ -126,7 +146,7 @@ function resolveDisplayFields(record: ConversionRecordItemResponse): {
   return {
     originalUrl: record.single_link?.original_url || "",
     shortCode: record.single_link?.code || "",
-    shortUrl: record.single_link?.code ? record.single_link.code : "",
+    shortUrl: buildShortUrlFromCode(record.single_link?.code),
     proxyMode: normalizeProxyMode(record.single_link?.response_mode),
     totalVisitCount: record.single_link?.visit_count,
   };
