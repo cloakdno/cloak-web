@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Search,
   Trash2,
@@ -27,8 +28,13 @@ import { BatchViewModal } from './BatchViewModal'
 import { BatchTextDetailResponse } from '@/app/lib/api'
 import toast from 'react-hot-toast'
 
+const MOBILE_MENU_WIDTH = 160
+const MOBILE_MENU_MARGIN = 16
+const MOBILE_MENU_ESTIMATED_HEIGHT = 176
+
 interface HistoryTableProps {
   links: ShortLink[]
+  isLoading?: boolean
   onDelete: (id: string) => void
   onDeleteGroup: (batchId: string) => void
   onEdit: (link: ShortLink) => void
@@ -42,6 +48,7 @@ interface HistoryTableProps {
 
 export function HistoryTable({
   links,
+  isLoading = false,
   onDelete,
   onDeleteGroup,
   onEdit,
@@ -79,6 +86,10 @@ export function HistoryTable({
     count: number
   } | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number
+    left: number
+  } | null>(null)
   const [viewingDetails, setViewingDetails] = useState<
     ShortLink | ConversionGroup | null
   >(null)
@@ -88,11 +99,29 @@ export function HistoryTable({
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setOpenMenuId(null)
+        setMenuPosition(null)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (!openMenuId) return
+
+    const handleViewportChange = () => {
+      setOpenMenuId(null)
+      setMenuPosition(null)
+    }
+
+    window.addEventListener('resize', handleViewportChange)
+    window.addEventListener('scroll', handleViewportChange, true)
+
+    return () => {
+      window.removeEventListener('resize', handleViewportChange)
+      window.removeEventListener('scroll', handleViewportChange, true)
+    }
+  }, [openMenuId])
 
   const itemsPerPage = 20
   // 搜索已在服务端处理，links 本身就是搜索结果或全部列表，无需本地过滤
@@ -108,6 +137,57 @@ export function HistoryTable({
     navigator.clipboard.writeText(text)
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const closeRowMenu = () => {
+    setOpenMenuId(null)
+    setMenuPosition(null)
+  }
+
+  const handleOpenRowMenu = (
+    menuId: string,
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    event.stopPropagation()
+
+    if (openMenuId === menuId) {
+      closeRowMenu()
+      return
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    const left = Math.min(
+      Math.max(rect.right - MOBILE_MENU_WIDTH, MOBILE_MENU_MARGIN),
+      window.innerWidth - MOBILE_MENU_MARGIN - MOBILE_MENU_WIDTH,
+    )
+    const openAbove =
+      rect.bottom + 8 + MOBILE_MENU_ESTIMATED_HEIGHT >
+        window.innerHeight - MOBILE_MENU_MARGIN &&
+      rect.top - 8 - MOBILE_MENU_ESTIMATED_HEIGHT >= MOBILE_MENU_MARGIN
+    const top = openAbove
+      ? Math.max(MOBILE_MENU_MARGIN, rect.top - 8 - MOBILE_MENU_ESTIMATED_HEIGHT)
+      : Math.min(
+          rect.bottom + 8,
+          window.innerHeight - MOBILE_MENU_MARGIN - MOBILE_MENU_ESTIMATED_HEIGHT,
+        )
+
+    setMenuPosition({ top, left })
+    setOpenMenuId(menuId)
+  }
+
+  const renderMobileMenu = (children: React.ReactNode) => {
+    if (!menuPosition || typeof document === 'undefined') return null
+
+    return createPortal(
+      <div
+        ref={menuRef}
+        className="fixed w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50"
+        style={{ top: menuPosition.top, left: menuPosition.left }}
+      >
+        {children}
+      </div>,
+      document.body,
+    )
   }
 
   const buildTaskGroup = (link: ShortLink): ConversionGroup => ({
@@ -168,23 +248,31 @@ export function HistoryTable({
     setIsBatchDetailLoading(false)
   }
 
+  const formatCompactCount = (count: number) => {
+    if (count > 10000) {
+      return `${(count / 10000).toFixed(1).replace(/\.0$/, '')}w`
+    }
+    if (count > 1000) {
+      return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k`
+    }
+    return count
+  }
+
   const getTotalVisits = (group: ConversionGroup) => {
     const taskTotal = group.links.find(
       (link) => typeof link.totalVisitCount === 'number',
     )?.totalVisitCount
-    if (typeof taskTotal === 'number') return taskTotal
+    if (typeof taskTotal === 'number') return formatCompactCount(taskTotal)
 
-    if (group.source === 'batch' || group.source === 'file') return 0
+    if (group.source === 'batch' || group.source === 'file') return formatCompactCount(0)
 
     const total = group.links.reduce((sum, l) => sum + (l.visits || []).length, 0)
-    if (total >= 10000) return `${(total / 10000).toFixed(1).replace(/\.0$/, '')}w`
-    if (total >= 1000) return `${(total / 1000).toFixed(1).replace(/\.0$/, '')}k`
-    return total
+    return formatCompactCount(total)
   }
 
   const getSingleVisitCount = (link: ShortLink) => {
-    if (typeof link.totalVisitCount === 'number') return link.totalVisitCount
-    return (link.visits || []).length
+    if (typeof link.totalVisitCount === 'number') return formatCompactCount(link.totalVisitCount)
+    return formatCompactCount((link.visits || []).length)
   }
 
   const getGroupRecognizedCount = (group: ConversionGroup) => {
@@ -271,6 +359,17 @@ export function HistoryTable({
     )
   }
 
+  if (isLoading) {
+    return (
+      <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+        <div className="inline-flex items-center gap-3 rounded-2xl bg-purple-50 px-5 py-4 text-purple-600">
+          <Loader2 size={20} className="animate-spin" />
+          <span className="text-sm font-medium">正在加载转换记录...</span>
+        </div>
+      </div>
+    )
+  }
+
   if (links.length === 0) {
     return (
       <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
@@ -315,6 +414,11 @@ export function HistoryTable({
                   <ExternalLink size={12} className="transition-opacity" />
                 </a>
                 {renderSourceBadge(link.source)}
+                <span className="sm:hidden">{renderProxyBadge(link.proxyMode, [link.id])}</span>
+                <span className="sm:hidden inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full text-[10px] font-medium">
+                  <BarChart3 size={10} />
+                  {getSingleVisitCount(link)}
+                </span>
               </>
             )}
           </div>
@@ -385,86 +489,83 @@ export function HistoryTable({
             <div className="sm:hidden flex justify-end">
               <button
                 onClick={(e) => {
-                  e.stopPropagation()
                   if (actionDisabled) return
-                  setOpenMenuId(isMenuOpen ? null : link.id)
+                  handleOpenRowMenu(link.id, e)
                 }}
                 disabled={actionDisabled}
                 className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
               >
                 <MoreVertical size={18} />
               </button>
-              {isMenuOpen && (
-                <div
-                  ref={menuRef}
-                  className="absolute right-4 top-12 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10"
-                >
-                  <button
-                    onClick={() => {
-                      handleCopy(link.shortUrl, link.id)
-                      setOpenMenuId(null)
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    {copiedId === link.id ? (
-                      <CheckCircle2 size={14} className="text-green-500" />
-                    ) : (
-                      <Copy size={14} className="text-gray-400" />
-                    )}
-                    复制短链
-                  </button>
-                  <button
-                    onClick={() => {
-                      onEdit(link)
-                      setOpenMenuId(null)
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <Edit2 size={14} className="text-gray-400" />
-                    编辑
-                  </button>
-                  <button
-                    onClick={() => {
-                      setViewingDetails(link)
-                      setOpenMenuId(null)
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <Info size={14} className="text-gray-400" />
-                    查看详情
-                  </button>
-                  <button
-                    onClick={() => {
-                      setProxyConfirm({
-                        ids: [link.id],
-                        currentMode: link.proxyMode || 'redirect',
-                        newMode: link.proxyMode === 'redirect' ? 'proxy' : 'redirect',
-                        count: 1,
-                      })
-                      setOpenMenuId(null)
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    {link.proxyMode === 'redirect' ? (
-                      <Globe size={14} className="text-gray-400" />
-                    ) : (
-                      <ArrowRightLeft size={14} className="text-gray-400" />
-                    )}
-                    切换模式
-                  </button>
-                  <div className="h-px bg-gray-100 my-1 mx-2" />
-                  <button
-                    onClick={() => {
-                      if (window.confirm('确定删除此链接？')) onDelete(link.id)
-                      setOpenMenuId(null)
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                  >
-                    <Trash2 size={14} />
-                    删除
-                  </button>
-                </div>
-              )}
+              {isMenuOpen &&
+                renderMobileMenu(
+                  <>
+                    <button
+                      onClick={() => {
+                        handleCopy(link.shortUrl, link.id)
+                        closeRowMenu()
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      {copiedId === link.id ? (
+                        <CheckCircle2 size={14} className="text-green-500" />
+                      ) : (
+                        <Copy size={14} className="text-gray-400" />
+                      )}
+                      复制短链
+                    </button>
+                    <button
+                      onClick={() => {
+                        onEdit(link)
+                        closeRowMenu()
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Edit2 size={14} className="text-gray-400" />
+                      编辑
+                    </button>
+                    <button
+                      onClick={() => {
+                        setViewingDetails(link)
+                        closeRowMenu()
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Info size={14} className="text-gray-400" />
+                      查看详情
+                    </button>
+                    <button
+                      onClick={() => {
+                        setProxyConfirm({
+                          ids: [link.id],
+                          currentMode: link.proxyMode || 'redirect',
+                          newMode: link.proxyMode === 'redirect' ? 'proxy' : 'redirect',
+                          count: 1,
+                        })
+                        closeRowMenu()
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      {link.proxyMode === 'redirect' ? (
+                        <Globe size={14} className="text-gray-400" />
+                      ) : (
+                        <ArrowRightLeft size={14} className="text-gray-400" />
+                      )}
+                      切换模式
+                    </button>
+                    <div className="h-px bg-gray-100 my-1 mx-2" />
+                    <button
+                      onClick={() => {
+                        if (window.confirm('确定删除此链接？')) onDelete(link.id)
+                        closeRowMenu()
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    >
+                      <Trash2 size={14} />
+                      删除
+                    </button>
+                  </>,
+                )}
             </div>
           </>
         </td>
@@ -474,13 +575,14 @@ export function HistoryTable({
 
   const renderGroupRow = (link: ShortLink, idx: number) => {
     const group = buildTaskGroup(link)
+    const groupRecognizedCount = getGroupRecognizedCount(group)
+    const formattedGroupRecognizedCount = formatCompactCount(groupRecognizedCount)
     const isFile = link.source === 'file'
     const converting = link.status === 'converting'
     const actionDisabled = converting
     const rowKey = link.id
     const groupIds = [link.id]
     const groupMode = link.proxyMode
-    const groupRecognizedCount = getGroupRecognizedCount(group)
     const isMenuOpen = openMenuId === rowKey
 
     return (
@@ -498,7 +600,7 @@ export function HistoryTable({
                 </span>
                 {renderTaskStatusBadge(true)}
                 <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-400 rounded-full font-medium">
-                  {groupRecognizedCount} 条
+                  {formattedGroupRecognizedCount} 条
                 </span>
               </>
             ) : (
@@ -514,7 +616,12 @@ export function HistoryTable({
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isFile ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}
                 >
-                  {groupRecognizedCount} 条
+                  {formattedGroupRecognizedCount} 条
+                </span>
+                <span className="sm:hidden">{renderProxyBadge(groupMode, groupIds)}</span>
+                <span className="sm:hidden inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">
+                  <BarChart3 size={10} />
+                  {getTotalVisits(group)}
                 </span>
               </>
             )}
@@ -522,7 +629,7 @@ export function HistoryTable({
         </td>
         <td className="p-4 hidden md:table-cell">
           <span className="text-sm text-gray-500">
-            {converting ? '正在转换...' : `${groupRecognizedCount} 条链接已转换`}
+            {converting ? '正在转换...' : `${formattedGroupRecognizedCount} 条链接已转换`}
           </span>
         </td>
         <td className="p-4 hidden lg:table-cell text-sm text-gray-500">
@@ -595,91 +702,88 @@ export function HistoryTable({
             <div className="sm:hidden flex justify-end">
               <button
                 onClick={(e) => {
-                  e.stopPropagation()
                   if (actionDisabled) return
-                  setOpenMenuId(isMenuOpen ? null : rowKey)
+                  handleOpenRowMenu(rowKey, e)
                 }}
                 disabled={actionDisabled}
                 className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
               >
                 <MoreVertical size={18} />
               </button>
-              {isMenuOpen && (
-                <div
-                  ref={menuRef}
-                  className="absolute right-4 top-12 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10"
-                >
-                  {isFile ? (
-                    <button
-                      onClick={() => {
-                        if (window.confirm('确定要下载转换结果文件吗？')) {
-                          if (onDownloadGroup) {
-                            onDownloadGroup(group)
-                          } else {
-                            handleDownloadGroup(group)
+              {isMenuOpen &&
+                renderMobileMenu(
+                  <>
+                    {isFile ? (
+                      <button
+                        onClick={() => {
+                          if (window.confirm('确定要下载转换结果文件吗？')) {
+                            if (onDownloadGroup) {
+                              onDownloadGroup(group)
+                            } else {
+                              handleDownloadGroup(group)
+                            }
                           }
-                        }
-                        setOpenMenuId(null)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Download size={14} className="text-gray-400" />
-                      下载结果
-                    </button>
-                  ) : (
+                          closeRowMenu()
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <Download size={14} className="text-gray-400" />
+                        下载结果
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          void openTaskDetail(group)
+                          closeRowMenu()
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <Eye size={14} className="text-gray-400" />
+                        查看结果
+                      </button>
+                    )}
                     <button
                       onClick={() => {
-                        void openTaskDetail(group)
-                        setOpenMenuId(null)
+                        setViewingDetails(group)
+                        closeRowMenu()
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                     >
-                      <Eye size={14} className="text-gray-400" />
-                      查看结果
+                      <Info size={14} className="text-gray-400" />
+                      查看详情
                     </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setViewingDetails(group)
-                      setOpenMenuId(null)
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <Info size={14} className="text-gray-400" />
-                    查看详情
-                  </button>
-                  <button
-                    onClick={() => {
-                      setProxyConfirm({
-                        ids: groupIds,
-                        currentMode: groupMode || 'redirect',
-                        newMode: groupMode === 'redirect' ? 'proxy' : 'redirect',
-                        count: groupRecognizedCount,
-                      })
-                      setOpenMenuId(null)
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    {groupMode === 'redirect' ? (
-                      <Globe size={14} className="text-gray-400" />
-                    ) : (
-                      <ArrowRightLeft size={14} className="text-gray-400" />
-                    )}
-                    切换模式
-                  </button>
-                  <div className="h-px bg-gray-100 my-1 mx-2" />
-                  <button
-                    onClick={() => {
-                      if (window.confirm('确定删除该任务？')) onDeleteGroup(group.batchId)
-                      setOpenMenuId(null)
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                  >
-                    <Trash2 size={14} />
-                    删除任务
-                  </button>
-                </div>
-              )}
+                    <button
+                      onClick={() => {
+                        setProxyConfirm({
+                          ids: groupIds,
+                          currentMode: groupMode || 'redirect',
+                          newMode: groupMode === 'redirect' ? 'proxy' : 'redirect',
+                          count: groupRecognizedCount,
+                        })
+                        closeRowMenu()
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      {groupMode === 'redirect' ? (
+                        <Globe size={14} className="text-gray-400" />
+                      ) : (
+                        <ArrowRightLeft size={14} className="text-gray-400" />
+                      )}
+                      切换模式
+                    </button>
+                    <div className="h-px bg-gray-100 my-1 mx-2" />
+                    <button
+                      onClick={() => {
+                        if (window.confirm('确定删除该任务？')) onDeleteGroup(group.batchId)
+                        closeRowMenu()
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    >
+                      <Trash2 size={14} className="text-red-400" />
+                      删除任务
+                    </button>
+                  </>,
+                )}
             </div>
           </>
         </td>
@@ -726,11 +830,11 @@ export function HistoryTable({
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                className="h-10 shrink-0 flex items-center gap-1.5 px-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                 title="刷新"
               >
                 <RefreshCw size={14} />
-                刷新
+                <span className="hidden sm:inline">刷新</span>
               </button>
             )}
           </div>
@@ -997,7 +1101,7 @@ export function HistoryTable({
                       <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                         包含链接
                       </span>
-                      <p className="mt-1 text-sm text-gray-800">{getGroupRecognizedCount(viewingDetails)} 条</p>
+                      <p className="mt-1 text-sm text-gray-800">{formatCompactCount(getGroupRecognizedCount(viewingDetails))} 条</p>
                     </div>
                     <div>
                       <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">

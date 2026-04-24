@@ -68,6 +68,7 @@ export function App() {
   const [expiryInfo, setExpiryInfo] = useState<SystemExpiryResponse | null>(null)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isExpiryLoading, setIsExpiryLoading] = useState(false)
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [usernameError, setUsernameError] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false)
@@ -281,6 +282,8 @@ export function App() {
 
     // 异步加载服务端历史
     const loadHistoryFromServer = async () => {
+      setIsHistoryLoading(true)
+      setLinks([])
       try {
         const response = await listConversions(apiClient, { page: 1, size: 20 })
         const mappedLinks = response.items.map(mapConversionRecordToShortLink)
@@ -289,6 +292,8 @@ export function App() {
         console.error('Failed to load history from server:', err)
         // 加载失败时保留当前列表或显示空列表
         setLinks([])
+      } finally {
+        setIsHistoryLoading(false)
       }
     }
 
@@ -303,6 +308,8 @@ export function App() {
   }, [authHydrated, apiClient, links])
 
   const handleLogin = (username: string, pw: string) => {
+    setLinks([])
+    setIsHistoryLoading(true)
     setUser(username)
     setAuthPassword(pw)
     setApiClient(createApiClient(username, pw))
@@ -315,6 +322,7 @@ export function App() {
     setUser(null)
     setAuthPassword(null)
     setApiClient(null)
+    setIsHistoryLoading(false)
     setProfile(null)
     setExpiryInfo(null)
     localStorage.removeItem(AUTH_KEY)
@@ -904,6 +912,7 @@ export function App() {
 
           <HistoryTable
             links={links}
+            isLoading={isHistoryLoading}
             onDelete={handleDelete}
             onDeleteGroup={handleDeleteGroup}
             onEdit={handleEdit}

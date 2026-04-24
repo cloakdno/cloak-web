@@ -65,14 +65,14 @@ export function BatchConvert({ onConvert }: BatchConvertProps) {
           placeholder="在此粘贴内容，系统会自动提取其中的 http/https 链接..."
           className="w-full h-64 sm:h-80 p-4 bg-transparent text-base resize-none focus:outline-none font-mono border-none"
         />
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className={`text-sm font-medium px-3 py-1 rounded-lg ${isOverLimit ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+        <div className="flex flex-col gap-3 px-4 py-3 border-t border-gray-100 sm:flex-row sm:items-center sm:justify-between">
+          <div className={`w-fit text-sm font-medium px-3 py-1 rounded-lg ${isOverLimit ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
             已识别 {urlCount} / 10000
           </div>
           <button
             onClick={handleSubmit}
             disabled={urlCount === 0 || isOverLimit}
-            className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white px-8 py-3 rounded-xl font-medium flex items-center gap-2 transition-colors"
+            className="w-full justify-center bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-colors sm:w-auto"
           >
             批量转换 <ArrowRight size={16} />
           </button>
